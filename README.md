@@ -2,7 +2,7 @@
 
 A blue, dark-themed Pinterest-inspired app, originally built by Amirhossein Ghazanfari Rad at age 13 as a CS50x final project.
 
-[Original video demo](https://youtu.be/EODyZn-WkIM) · [Original README](docs/README-original.md) · [V2 task plan](TASKS.md)
+[Original video demo](https://youtu.be/EODyZn-WkIM) · [Original README](docs/README-original.md) · [V2 task plan](TASKS.md) · [Verification](docs/VERIFICATION.md)
 
 ## Why I made it
 
@@ -14,8 +14,84 @@ Connecting React, a Python API, a database, accounts, image uploads, and comment
 
 - **Original project:** built at age 13 for CS50x. The project folder references the 2022 course; the exact completion date has not been confirmed.
 - **October 9, 2026:** revisited the project, initialized a local Git repository, and planned a second version using Django and React.
+- **October 9, 2026, V2 foundation:** completed tasks 1–4: V1 reproduction, Django/React setup, data models, and secure account flows. Uploads, feeds, boards, and search remain the next milestones.
 
-The original README is preserved verbatim in `docs/README-original.md`, including its wording and acknowledgments. Original source remains in `btrest/`. V2 implementation has not started.
+The original README is preserved verbatim in `docs/README-original.md`, including its wording and acknowledgments. Original source remains unchanged in `btrest/`, with Git tag `legacy-v1` preserving its initial snapshot. V2 lives in separate `backend/` and `frontend/` directories.
+
+## V2: current state
+
+**Stack:** Django 5.2, SQLite, React 19, Vite, TypeScript, and Tailwind CSS.
+
+Implemented:
+
+- Registration, login, logout, and current-account lookup using server sessions and CSRF protection.
+- Django password validation/hashing and one-use password reset links; development emails print in the Django terminal.
+- Custom user, profile, post, comment, board, and saved-post models with migrations and database constraints.
+- Django admin and repeatable synthetic demo data.
+- Owner-only metadata changes/deletion for existing records, private-board access checks, and persistent API rate limits.
+- Responsive account screens and a story page preserving the project's origin.
+
+Post uploads, image cleanup, live feeds, comment creation, full profiles/boards, and search are not implemented yet. Existing-record permission endpoints establish the foundation for those tasks.
+
+### Run V2 (PowerShell)
+
+Prerequisites: Python 3.12 and Node.js 22.12 or newer. Tested on Python 3.12 and Node 24.21.0. From the repository root:
+
+```powershell
+./scripts/setup.ps1
+```
+
+This creates `.venv`, installs locked dependencies, generates an ignored `backend/.env` with a fresh development secret, and applies migrations to the new V2 database. It does not touch V1 data.
+
+If PowerShell blocks script execution, use the equivalent commands:
+
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r backend/requirements-lock.txt
+.\.venv\Scripts\python.exe scripts/setup_backend.py
+.\.venv\Scripts\python.exe backend/manage.py migrate
+cd frontend
+npm ci
+cd ..
+```
+
+Start Django in one terminal:
+
+```powershell
+.\.venv\Scripts\python.exe backend/manage.py runserver 127.0.0.1:8000
+```
+
+Start React in another:
+
+```powershell
+cd frontend
+npm run dev
+```
+
+Open **http://127.0.0.1:5173**. Register a new account; legacy accounts are not imported. Use one browser hostname throughout the session. API requests use the frontend's same-origin proxy.
+
+Optional admin and demo setup:
+
+```powershell
+.\.venv\Scripts\python.exe backend/manage.py createsuperuser
+.\.venv\Scripts\python.exe backend/manage.py seed_demo
+```
+
+Admin is available at `http://127.0.0.1:5173/admin/`. Synthetic demo accounts have unusable passwords by default. Use `manage.py changepassword demo_blue` if you want to sign in as one.
+
+### Verification
+
+```powershell
+.\.venv\Scripts\python.exe backend/manage.py check
+.\.venv\Scripts\python.exe backend/manage.py makemigrations --check --dry-run
+.\.venv\Scripts\python.exe backend/manage.py test accounts collection
+cd frontend
+npm run build
+```
+
+29 backend tests passed, Django reported no issues or migration drift, and the frontend production build passed. Browser checks covered registration, login errors/success, logout, reset requests, and desktop/mobile layouts. See [verification details](docs/VERIFICATION.md) and [API conventions](docs/API.md).
+
+![V2 account screen](docs/screenshots/v2-login-desktop.jpg)
 
 ## Original version (v1)
 
@@ -39,7 +115,13 @@ V1 is a historical learning prototype and is not ready for public deployment.
 ```text
 btrest/back/             Original Flask API and local data
 btrest/front/            Original React app and build configuration
+backend/                 V2 Django application, models, admin, and API
+frontend/                V2 React/Vite/TypeScript application
+scripts/                 Setup and safe V1 reproduction tools
 docs/README-original.md  Unedited original project description
+docs/LEGACY.md           V1 reproduction results and visual references
+docs/API.md              API contract, authentication, and permissions
+docs/VERIFICATION.md     Checks performed and screenshots
 TASKS.md                 Proposed V2 tasks and completion criteria
 ```
 
@@ -47,7 +129,7 @@ The supplied database and generated frontend build remain locally available but 
 
 ## Running the original app
 
-These are expected commands from the source, not a verified setup guide. Frontend dependencies and the Flask, Flask-CORS, and CS50 packages were missing during review. Reproducing V1 is the first implementation task.
+V1 dependencies, frontend build, basic API behavior, and account screens were reproduced using a database copy. Full instructions and observed failures are in [docs/LEGACY.md](docs/LEGACY.md). The original image files referenced by the seven posts were not supplied.
 
 Backend, in a virtual environment with `flask`, `flask-cors`, and `cs50` installed:
 
@@ -72,7 +154,7 @@ Preserve the dark/blue identity while rebuilding the backend with Django and mod
 
 Use one backend and one frontend, same-origin session authentication with CSRF protection, and SQLite for initial development. Production storage choices will depend on deployment requirements.
 
-[V2 tasks](TASKS.md) describe the sequence, acceptance criteria, and deferred ideas. Implementation waits until the task plan has been reviewed.
+[V2 tasks](TASKS.md) describe the sequence, acceptance criteria, and deferred ideas. Tasks 1–4 were approved and completed; task 5 (image posts) is the next review point. Nothing has been deployed.
 
 ## Acknowledgments
 

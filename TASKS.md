@@ -1,6 +1,6 @@
 # Bintrest V2 task plan
 
-Status: proposed for review on October 9, 2026. No V2 implementation has started.
+Status: tasks 1–4 approved and completed on October 9, 2026. Tasks 5–11 remain pending. See docs/VERIFICATION.md for evidence.
 
 ## Preparation completed
 
@@ -16,38 +16,38 @@ Preserve `btrest/` as V1. Build V2 in new `backend/` and `frontend/` directories
 
 ## 1. Reproduce and document V1
 
-- [ ] Inventory source, schema, media references, and dependencies without exposing account data.
-- [ ] Set up isolated dependencies and attempt to run the original app; record commands and blockers.
-- [ ] Record working user flows, failures, and visual references.
-- [ ] Review tracked files, create an initial source commit, and tag the legacy snapshot.
+- [x] Inventory source, schema, media references, and dependencies without exposing account data.
+- [x] Set up isolated dependencies and attempt to run the original app; record commands and blockers.
+- [x] Record working user flows, failures, and visual references.
+- [x] Review tracked files, create an initial source commit, and tag the legacy snapshot.
 
 **Done when:** the original source is recoverable and its behavior/setup is documented. Never modify the only copy of the legacy database.
 
 ## 2. Create the V2 foundation
 
-- [ ] Scaffold Django and React/Vite/TypeScript in new directories.
-- [ ] Add dependency manifests, environment examples, and startup commands.
-- [ ] Configure development API proxying and define production same-origin routing.
-- [ ] Define JSON response/error conventions and API routes.
-- [ ] Add a responsive application shell and dark/blue design tokens.
+- [x] Scaffold Django and React/Vite/TypeScript in new directories.
+- [x] Add dependency manifests, environment examples, and startup commands.
+- [x] Configure development API proxying and define production same-origin routing.
+- [x] Define JSON response/error conventions and API routes.
+- [x] Add a responsive application shell and dark/blue design tokens.
 
 **Done when:** a fresh setup runs both services and the frontend calls a backend health endpoint; secrets remain outside source control.
 
 ## 3. Build models and migrations
 
-- [ ] Define the user model before initial migrations; add Profile, Post, Comment, Board, and SavedPost.
-- [ ] Add ownership, timestamps, foreign keys, indexes, and uniqueness constraints.
-- [ ] Configure Django admin and synthetic demo-data generation.
+- [x] Define the user model before initial migrations; add Profile, Post, Comment, Board, and SavedPost.
+- [x] Add ownership, timestamps, foreign keys, indexes, and uniqueness constraints.
+- [x] Configure Django admin and synthetic demo-data generation.
 
 **Done when:** fresh migrations work, invalid relationships and duplicate saves are prevented, and demo content appears in admin.
 
 ## 4. Implement authentication and permissions
 
-- [ ] Implement registration, login, logout, current-user lookup, and password reset.
-- [ ] Use Django password handling, sessions, CSRF protection, and backend validation.
-- [ ] Derive ownership from authenticated requests and enforce owner-only edits/deletes.
-- [ ] Add rate limits for authentication and writes; remove sensitive logging.
-- [ ] Build account screens and session-aware navigation.
+- [x] Implement registration, login, logout, current-user lookup, and password reset.
+- [x] Use Django password handling, sessions, CSRF protection, and backend validation.
+- [x] Derive ownership from authenticated requests and enforce owner-only edits/deletes.
+- [x] Add rate limits for authentication and writes; remove sensitive logging.
+- [x] Build account screens and session-aware navigation.
 
 **Done when:** account flows work, anonymous writes and forged identities fail, and one user cannot modify another user's resources. Verify CSRF protection. Test reset emails through development email output; production delivery comes later.
 
@@ -127,4 +127,4 @@ Preserve `btrest/` as V1. Build V2 in new `backend/` and `frontend/` directories
 
 ## Review checkpoint
 
-Stop after preparation and show this task list before starting task 1. The original completion year remains unconfirmed; do not turn the 2022 course-folder reference into a claimed completion date.
+The user approved tasks 1–4. Those tasks are complete; stop before task 5 until further authorization. The original completion year remains unconfirmed; do not turn the 2022 course-folder reference into a claimed completion date.

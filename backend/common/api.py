@@ -4,7 +4,7 @@ import math
 from functools import wraps
 
 from django.conf import settings
-from django.core.exceptions import ValidationError
+from django.core.exceptions import ValidationError, RequestDataTooBig, TooManyFieldsSent, TooManyFilesSent
 from django.db import IntegrityError
 from django.db.models import F
 from django.http import Http404, JsonResponse
@@ -48,7 +48,7 @@ def consume_limit(action, identity, limit, seconds):
     return max(1, math.ceil((expires - now).total_seconds())) if bucket.count > limit else 0
 
 
-def endpoint(methods, *, authenticated=False, rate=None, account_field=None):
+def endpoint(methods, *, authenticated=False, rate=None, account_field=None, multipart=False):
     def decorate(view):
         @wraps(view)
         def wrapped(request, *args, **kwargs):
@@ -61,13 +61,19 @@ def endpoint(methods, *, authenticated=False, rate=None, account_field=None):
             try:
                 request.data = {}
                 # Consume the IP bucket before parsing to also limit malformed requests.
-                if rate and settings.API_RATE_LIMITS_ENABLED:
+                if rate and request.method != "GET" and settings.API_RATE_LIMITS_ENABLED:
                     wait = consume_limit(view.__name__, request.META.get("REMOTE_ADDR", "unknown"), *rate)
                     if wait:
                         response = failure("rate_limited", "Too many attempts. Please try again later.", 429)
                         response["Retry-After"] = str(wait)
                         return response
-                if request.method in {"POST", "PATCH", "PUT", "DELETE"} and request.body:
+                if multipart and request.content_type == "multipart/form-data":
+                    if request.method != "POST":
+                        raise ApiError("unsupported_media_type", "Use JSON for edits.", 415)
+                    if any(len(request.POST.getlist(key)) != 1 for key in request.POST):
+                        raise ApiError("invalid_input", "Repeated fields are not supported.")
+                    request.data = request.POST.dict()
+                elif request.method in {"POST", "PATCH", "PUT", "DELETE"} and request.body:
                     if request.content_type != "application/json":
                         raise ApiError("unsupported_media_type", "Send JSON with Content-Type application/json.", 415)
                     try:
@@ -82,8 +88,8 @@ def endpoint(methods, *, authenticated=False, rate=None, account_field=None):
                         if key in {"password", "password1", "password2", "new_password1", "new_password2"}:
                             if not isinstance(value, str) or len(value) > 1024:
                                 raise ApiError("validation_error", "Please check the highlighted fields.", fields={key: ["Use a password of at most 1024 characters."]})
-                    if any(key in request.data for key in ("user_id", "owner", "owner_id", "author", "author_id")):
-                        raise ApiError("invalid_owner", "Ownership is determined by your signed-in account.")
+                if any(key in request.data for key in ("user_id", "owner", "owner_id", "author", "author_id")):
+                    raise ApiError("invalid_owner", "Ownership is determined by your signed-in account.")
                 if account_field and settings.API_RATE_LIMITS_ENABLED:
                     account = request.data.get(account_field, "")
                     if isinstance(account, str) and account.strip():
@@ -102,6 +108,10 @@ def endpoint(methods, *, authenticated=False, rate=None, account_field=None):
                 return failure("validation_error", "Please check the highlighted fields.", fields=fields)
             except IntegrityError:
                 return failure("conflict", "An item with these details already exists.", 409)
+            except (RequestDataTooBig, TooManyFieldsSent, TooManyFilesSent):
+                return failure("request_too_large", "This upload is too large.", 413)
+            except OSError:
+                return failure("storage_unavailable", "Image storage is unavailable. Please try again.", 503)
         return wrapped
     return decorate
 

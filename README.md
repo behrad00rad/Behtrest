@@ -14,7 +14,8 @@ Connecting React, a Python API, a database, accounts, image uploads, and comment
 
 - **Original project:** built at age 13 for CS50x. The project folder references the 2022 course; the exact completion date has not been confirmed.
 - **October 9, 2026:** revisited the project, initialized a local Git repository, and planned a second version using Django and React.
-- **October 9, 2026, V2 foundation:** completed tasks 1–4: V1 reproduction, Django/React setup, data models, and secure account flows. Uploads, feeds, boards, and search remain the next milestones.
+- **October 9, 2026, V2 foundation:** completed tasks 1–4: V1 reproduction, Django/React setup, data models, and secure account flows.
+- **October 9, 2026, V2 collections:** completed tasks 5–8: safe image uploads, paginated feeds and comments, profiles, boards, saves, tags, and search.
 
 The original README is preserved verbatim in `docs/README-original.md`, including its wording and acknowledgments. Original source remains unchanged in `btrest/`, with Git tag `legacy-v1` preserving its initial snapshot. V2 lives in separate `backend/` and `frontend/` directories.
 
@@ -31,7 +32,13 @@ Implemented:
 - Owner-only metadata changes/deletion for existing records, private-board access checks, and persistent API rate limits.
 - Responsive account screens and a story page preserving the project's origin.
 
-Post uploads, image cleanup, live feeds, comment creation, full profiles/boards, and search are not implemented yet. Existing-record permission endpoints establish the foundation for those tasks.
+- Image uploads with previews/progress, content validation, metadata removal, normalized WebP images, and thumbnails.
+- Paginated masonry feed, post details and owner controls, and editable comments.
+- Profile editing and avatars, public/private boards, board covers, and saved pins.
+- Tags, validated source links, pin and people search, and empty/error/retry states.
+- 24 repeatable synthetic illustration posts; failed media deletions have a durable retry queue.
+
+Private boards hide their collections; the original pins remain public. Local development uses filesystem media storage. Retry failed deletions with `python backend/manage.py cleanup_media` using the project virtual environment.
 
 ### Run V2 (PowerShell)
 
@@ -89,9 +96,9 @@ cd frontend
 npm run build
 ```
 
-29 backend tests passed, Django reported no issues or migration drift, and the frontend production build passed. Browser checks covered registration, login errors/success, logout, reset requests, and desktop/mobile layouts. See [verification details](docs/VERIFICATION.md) and [API conventions](docs/API.md).
+47 backend tests passed, Django reported no issues or migration drift, and the frontend production build passed. Browser checks covered accounts and the upload → comment → private board → profile journey, search, and desktop/mobile layouts. See [verification details](docs/VERIFICATION.md) and [API conventions](docs/API.md).
 
-![V2 account screen](docs/screenshots/v2-login-desktop.jpg)
+![V2 inspiration feed](docs/screenshots/v2-feed-desktop.jpg)
 
 ## Original version (v1)
 
@@ -154,7 +161,7 @@ Preserve the dark/blue identity while rebuilding the backend with Django and mod
 
 Use one backend and one frontend, same-origin session authentication with CSRF protection, and SQLite for initial development. Production storage choices will depend on deployment requirements.
 
-[V2 tasks](TASKS.md) describe the sequence, acceptance criteria, and deferred ideas. Tasks 1–4 were approved and completed; task 5 (image posts) is the next review point. Nothing has been deployed.
+[V2 tasks](TASKS.md) describe the sequence, acceptance criteria, and deferred ideas. Tasks 1–8 were approved and completed; task 9 (polish, end-to-end automation, and CI) is the next review point. Legacy import and deployment remain pending. Nothing has been deployed.
 
 ## Acknowledgments
 

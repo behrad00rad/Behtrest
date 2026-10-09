@@ -1,6 +1,6 @@
-# V2 API foundation
+# V2 API
 
-All paths below are under `/api/`. Requests and responses use JSON. Success: `{"data": ...}`. Errors: `{"error":{"code":"...","message":"...","fields":{"field":["message"]}}}`; `fields` is included only when applicable.
+All paths below are under `/api/`. Requests and responses use JSON, except image uploads which use multipart form data. Success: `{"data": ...}`. Errors: `{"error":{"code":"...","message":"...","fields":{"field":["message"]}}}`; `fields` is included only when applicable.
 
 ## Browser authentication
 
@@ -27,19 +27,42 @@ Passwords use Django's password handling and validators, a minimum of 10 charact
 
 ## Ownership gates
 
-These endpoints operate on existing records to establish permissions in task 4. Record creation, upload processing, feed retrieval, and complete collection UI remain tasks 5–8.
+Writes require a session and CSRF token. Public collection reads expose only active users' content.
 
 | Method | Path | Editable fields / behavior |
 | --- | --- | --- |
-| PATCH, DELETE | `posts/<id>/` | Owner only; title, description |
+| GET, PATCH, DELETE | `posts/<id>/` | Public read; owner writes: title, description, alt_text, source_url, tags |
 | PATCH, DELETE | `comments/<id>/` | Author only; text |
 | GET | `boards/<id>/` | Public board metadata, or private metadata for its owner |
-| PATCH, DELETE | `boards/<id>/manage/` | Owner only; name, description, is_private (JSON boolean) |
+| PATCH, DELETE | `boards/<id>/manage/` | Owner only; name, description, is_private (JSON boolean), cover_post_id (saved pin ID or null) |
 | DELETE | `saves/<id>/` | Board owner only |
 
 Writes derive ownership from the server session. Fields such as `user_id`, `owner_id`, and `author_id` are rejected. Unauthorized ownership queries return 404, anonymous writes return 401, failed CSRF returns 403, unsupported methods return 405, and rate limits return 429 with `Retry-After`.
 
-Post image cleanup and upload lifecycle handling are deferred to task 5. Do not use these foundational endpoints as a public image service yet.
+## Collections and uploads
+
+| Method | Path | Fields / filters |
+| --- | --- | --- |
+| GET | `feed/` | q, tag, owner (username), page_size, cursor |
+| POST | `posts/` | Multipart image, title, description, alt_text, source_url, tags |
+| GET, POST | `posts/<id>/comments/` | Paginated read; JSON text for creation |
+| GET, POST | `boards/` | Paginated read (optional owner); create with name, description, is_private |
+| GET | `boards/<id>/posts/` | Paginated saved pins; private board owner only |
+| POST | `boards/<id>/saves/` | post_id; idempotent save, owner only |
+| DELETE | `boards/<id>/saves/<post_id>/` | Remove pin and clear its manual cover, owner only |
+| GET | `profiles/<username>/` | Public profile and counts; no email; private board counts only for self |
+| POST | `profile/avatar/` | Multipart image; replaces signed-in user's avatar |
+| DELETE | `profile/avatar/remove/` | Removes signed-in user's avatar |
+| GET | `people/` | q, page_size, cursor; username and display-name search |
+| GET | `tags/` | Tags used by active users' pins |
+
+Paginated results contain `items` and `next_cursor`. Page size defaults to 18, maximum 36. Signed cursors expire after one day and are bound to query filters and visibility. Ordering uses timestamps and IDs; each traversal retains a cutoff so newer inserts do not disturb subsequent pages. Comments run oldest first; other lists run newest first. Changing filters requires a fresh cursor.
+
+Tags are a comma-separated string on writes, at most eight distinct normalized tags of 40 characters each; reads return an array. Source links allow HTTP/HTTPS without embedded credentials; the server does not fetch them. Basic search uses database queries rather than an external search service.
+
+Images must be still JPEG, PNG, or WebP, at most 8 MB, 20 million pixels, and 8192 pixels on either axis. Processing verifies contents, applies orientation, strips metadata, and writes a UUID-named WebP (maximum 2400 pixels) plus a 640-pixel thumbnail. Avatars are cropped to 256 square pixels. Responses include dimensions and media URLs. The overall upload request has a 9 MB guard before CSRF parsing.
+
+Failed creation cleans newly written files. Successful deletion or avatar replacement schedules cleanup after the database commit; storage failures enter `MediaCleanup`. Run `python backend/manage.py cleanup_media` periodically to retry. Removing a board or save does not remove the source pin. Private boards hide their metadata and saved collection from other users; pins themselves are public.
 
 ## Rate limiting
 

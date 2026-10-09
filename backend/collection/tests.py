@@ -143,6 +143,6 @@ class ModelTests(MediaTestCase):
         with tempfile.TemporaryDirectory() as directory, override_settings(MEDIA_ROOT=directory):
             call_command("seed_demo", verbosity=0)
             call_command("seed_demo", verbosity=0)
-            self.assertEqual(Post.objects.filter(owner__username__startswith="demo_").count(), 6)
+            self.assertEqual(Post.objects.filter(owner__username__startswith="demo_").count(), 24)
             self.assertEqual(Board.objects.filter(owner__username__startswith="demo_").count(), 4)
             self.assertFalse(get_user_model().objects.get(username="demo_blue").has_usable_password())

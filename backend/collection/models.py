@@ -25,10 +25,14 @@ class Post(TimestampedModel):
     image = models.ImageField(upload_to=post_image_path, width_field="image_width", height_field="image_height")
     image_width = models.PositiveIntegerField(null=True, blank=True)
     image_height = models.PositiveIntegerField(null=True, blank=True)
+    thumbnail = models.ImageField(upload_to="thumbnails/", blank=True)
+    alt_text = models.CharField(max_length=500, blank=True)
+    source_url = models.URLField(max_length=500, blank=True)
+    tags = models.ManyToManyField("Tag", blank=True, related_name="posts")
 
     class Meta:
         ordering = ("-created_at", "-id")
-        indexes = [models.Index(fields=["owner", "-created_at", "-id"], name="post_owner_created_idx")]
+        indexes = [models.Index(fields=["owner", "-created_at", "-id"], name="post_owner_created_idx"), models.Index(fields=["-created_at", "-id"], name="post_feed_created_idx")]
         constraints = [models.CheckConstraint(condition=~Q(title=""), name="post_title_required")]
 
     def __str__(self):
@@ -54,6 +58,7 @@ class Board(TimestampedModel):
     name = models.CharField(max_length=100)
     description = models.CharField(max_length=500, blank=True)
     is_private = models.BooleanField(default=False)
+    cover = models.ForeignKey(Post, null=True, blank=True, on_delete=models.SET_NULL, related_name="cover_for_boards")
 
     class Meta:
         ordering = ("-updated_at", "-id")
@@ -76,3 +81,18 @@ class SavedPost(TimestampedModel):
 
     def __str__(self):
         return f"Post {self.post_id} in board {self.board_id}"
+
+
+class Tag(models.Model):
+    name = models.SlugField(max_length=40, unique=True)
+
+    class Meta:
+        ordering = ("name",)
+
+    def __str__(self):
+        return self.name
+
+
+class MediaCleanup(models.Model):
+    name = models.CharField(max_length=255, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)

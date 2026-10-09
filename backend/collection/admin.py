@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Board, Comment, Post, SavedPost
+from .models import Board, Comment, Post, SavedPost, Tag
 
 
 @admin.register(Post)
@@ -30,3 +30,8 @@ class BoardAdmin(admin.ModelAdmin):
 class SavedPostAdmin(admin.ModelAdmin):
     list_display = ("post", "board", "created_at")
     autocomplete_fields = ("board", "post")
+
+
+@admin.register(Tag)
+class TagAdmin(admin.ModelAdmin):
+    search_fields = ("name",)

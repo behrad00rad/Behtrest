@@ -20,6 +20,7 @@ INSTALLED_APPS = [
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "common.media.UploadLimitMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -65,6 +66,8 @@ CSRF_COOKIE_HTTPONLY = True
 CSRF_FAILURE_VIEW = "common.api.csrf_failure"
 SESSION_COOKIE_AGE = 60 * 60 * 24 * 7
 DATA_UPLOAD_MAX_MEMORY_SIZE = 1024 * 1024
+DATA_UPLOAD_MAX_NUMBER_FILES = 1
+DATA_UPLOAD_MAX_NUMBER_FIELDS = 20
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = "DENY"
 # Rate buckets are persisted in SQLite, shared by all Django workers.

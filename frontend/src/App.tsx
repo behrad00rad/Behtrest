@@ -1,12 +1,41 @@
 import { useEffect, useState } from "react";
-import { ArrowRight, ArrowUpRight, LogOut, Sparkles } from "lucide-react";
-import { Link, Navigate, Route, Routes, useLocation } from "react-router-dom";
-import { request } from "./api";
+import type { FormEvent, ReactNode } from "react";
+import {
+  ArrowRight,
+  ArrowUpRight,
+  LogOut,
+  Search as SearchIcon,
+  Plus,
+  Bookmark,
+} from "lucide-react";
+import {
+  Link,
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
+import { Explore, Search, CreatePost, PostDetail } from "./Posts";
+import { MyBoards, ProfilePage, BoardDetail } from "./Collections";
+import { Avatar } from "./components";
 import { useAuth } from "./auth";
 import AccountForm from "./AccountForm";
 
 function Header() {
   const auth = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [query, setQuery] = useState(
+    new URLSearchParams(location.search).get("q") || "",
+  );
+  useEffect(() => {
+    setQuery(new URLSearchParams(location.search).get("q") || "");
+  }, [location.search]);
+  function search(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    navigate(`/search?q=${encodeURIComponent(query.trim())}`);
+  }
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   async function signOut() {
@@ -27,13 +56,45 @@ function Header() {
           <span className="brand-mark">b</span>bintrest
           <span className="brand-dot">.</span>
         </Link>
+        {auth.user && (
+          <form className="header-search" onSubmit={search} role="search">
+            <SearchIcon size={18} />
+            <input
+              aria-label="Search pins and people"
+              placeholder="Find a little inspiration…"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              maxLength={100}
+            />
+            <button aria-label="Search" type="submit">
+              <ArrowRight size={17} />
+            </button>
+          </form>
+        )}
         <nav aria-label="Main navigation">
           <Link className="story-link" to="/story">
             Our story <ArrowUpRight size={14} />
           </Link>
           {auth.user ? (
             <>
-              <span className="nav-user">@{auth.user.username}</span>
+              <Link className="quiet-button" to="/boards">
+                <Bookmark size={17} />
+                <span className="nav-label">Boards</span>
+              </Link>
+              <Link className="nav-create" to="/create" aria-label="Create pin">
+                <Plus size={18} />
+                <span className="nav-label">Create</span>
+              </Link>
+              <Link to={`/u/${auth.user.username}`} aria-label="Your profile">
+                <Avatar
+                  author={{
+                    username: auth.user.username,
+                    display_name: auth.user.profile.display_name,
+                    avatar: auth.user.profile.avatar,
+                  }}
+                  size="small"
+                />
+              </Link>
               <button
                 className="quiet-button"
                 onClick={() => void signOut()}
@@ -59,79 +120,8 @@ function Header() {
   );
 }
 
-function Home() {
-  const { user } = useAuth();
-  const [health, setHealth] = useState<"checking" | "ok" | "error">("checking");
-  useEffect(() => {
-    let active = true;
-    request<{ status: string }>("/health/")
-      .then(() => {
-        if (active) setHealth("ok");
-      })
-      .catch(() => {
-        if (active) setHealth("error");
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
-  if (!user) return <Navigate to="/login" replace />;
-  return (
-    <main className="workspace">
-      <div className="welcome-row">
-        <div>
-          <span className="eyebrow">YOUR LITTLE CORNER</span>
-          <h1>
-            Hello, {user.profile.display_name || user.username}
-            <span className="brand-dot">.</span>
-          </h1>
-          <p>Good to have you here. Let’s make room for a few good ideas.</p>
-        </div>
-        <span className="avatar" aria-label={`Account ${user.username}`}>
-          {(user.profile.display_name || user.username)
-            .slice(0, 1)
-            .toUpperCase()}
-        </span>
-      </div>
-      <section className="workspace-card">
-        <div className="workspace-art" aria-hidden="true">
-          <span className="floating-shape shape-one" />
-          <span className="floating-shape shape-two" />
-          <Sparkles size={35} />
-        </div>
-        <div>
-          <span className="eyebrow">A NEW CHAPTER</span>
-          <h2>
-            Your next idea
-            <br />
-            starts here.
-          </h2>
-          <p>
-            We’re making a home for your collections.
-            <br />
-            For now, your account is ready and waiting.
-          </p>
-          <Link className="text-link" to="/story">
-            See where it all began <ArrowUpRight size={18} />
-          </Link>
-        </div>
-      </section>
-      <div className="account-strip">
-        <span>
-          Signed in as <strong>@{user.username}</strong>
-        </span>
-        <span>{user.email}</span>
-        <span className={`service-status ${health}`} role="status">
-          <i />
-          {health === "ok"
-            ? "All connected"
-            : health === "checking"
-              ? "Checking connection…"
-              : "Connection unavailable"}
-        </span>
-      </div>
-    </main>
-  );
+function Protected({ children }: { children: ReactNode }) {
+  return useAuth().user ? children : <Navigate to="/login" replace />;
 }
 
 function Story() {
@@ -213,7 +203,62 @@ export default function App() {
           </div>
         ) : (
           <Routes>
-            <Route path="/" element={<Home />} />
+            <Route
+              path="/"
+              element={
+                <Protected>
+                  <Explore />
+                </Protected>
+              }
+            />
+            <Route
+              path="/search"
+              element={
+                <Protected>
+                  <Search />
+                </Protected>
+              }
+            />
+            <Route
+              path="/create"
+              element={
+                <Protected>
+                  <CreatePost />
+                </Protected>
+              }
+            />
+            <Route
+              path="/posts/:id"
+              element={
+                <Protected>
+                  <PostDetail key={location.pathname} />
+                </Protected>
+              }
+            />
+            <Route
+              path="/boards"
+              element={
+                <Protected>
+                  <MyBoards />
+                </Protected>
+              }
+            />
+            <Route
+              path="/boards/:id"
+              element={
+                <Protected>
+                  <BoardDetail key={location.pathname} />
+                </Protected>
+              }
+            />
+            <Route
+              path="/u/:username"
+              element={
+                <Protected>
+                  <ProfilePage key={location.pathname} />
+                </Protected>
+              }
+            />
             <Route
               path="/login"
               element={<AccountForm key="login" mode="login" />}

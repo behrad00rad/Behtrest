@@ -1,6 +1,6 @@
 # Bintrest V2 task plan
 
-Status: tasks 1–4 approved and completed on October 9, 2026. Tasks 5–11 remain pending. See docs/VERIFICATION.md for evidence.
+Status: tasks 1–8 approved and completed on October 9, 2026. Tasks 9–11 remain pending. See docs/VERIFICATION.md for evidence.
 
 ## Preparation completed
 
@@ -53,36 +53,36 @@ Preserve `btrest/` as V1. Build V2 in new `backend/` and `frontend/` directories
 
 ## 5. Implement image posts
 
-- [ ] Validate image contents, file size and dimensions; use safe unique filenames and correct content types.
-- [ ] Generate thumbnails, record dimensions, and handle failed uploads/deleted media.
-- [ ] Implement post creation, detail, editing, and deletion APIs.
-- [ ] Build upload preview/progress, validation feedback, and post detail screens.
+- [x] Validate image contents, file size and dimensions; use safe unique filenames and correct content types.
+- [x] Generate thumbnails, record dimensions, and handle failed uploads/deleted media.
+- [x] Implement post creation, detail, editing, and deletion APIs.
+- [x] Build upload preview/progress, validation feedback, and post detail screens.
 
 **Done when:** valid images render, invalid files are rejected, ownership is enforced, and failed writes/deletions do not leave inconsistent records or media.
 
 ## 6. Build the feed and comments
 
-- [ ] Implement deterministic cursor pagination with duplicate/overlapping-request prevention.
-- [ ] Build responsive masonry cards, reserved image space, and lazy loading.
-- [ ] Add loading, empty, retry, error, and end-of-feed states.
-- [ ] Implement comment creation, editing, and deletion with permissions.
-- [ ] Clean up listeners/requests and handle route changes correctly.
+- [x] Implement deterministic cursor pagination with duplicate/overlapping-request prevention.
+- [x] Build responsive masonry cards, reserved image space, and lazy loading.
+- [x] Add loading, empty, retry, error, and end-of-feed states.
+- [x] Implement comment creation, editing, and deletion with permissions.
+- [x] Clean up listeners/requests and handle route changes correctly.
 
 **Done when:** scrolling advances through real pages without repeating the feed, new inserts do not disrupt pagination, and comment ownership is enforced.
 
 ## 7. Complete profiles, boards, and saves
 
-- [ ] Add profile editing, safe avatar uploads, and uploaded-post lists.
-- [ ] Implement public/private boards, owner controls, and board covers.
-- [ ] Implement saving/removing posts and enforce private-board access.
+- [x] Add profile editing, safe avatar uploads, and uploaded-post lists.
+- [x] Implement public/private boards, owner controls, and board covers.
+- [x] Implement saving/removing posts and enforce private-board access.
 
 **Done when:** users organize posts into boards, profiles show real content, and other users cannot access private collections.
 
 ## 8. Add search, tags, and source links
 
-- [ ] Add tags and optional validated source URLs.
-- [ ] Search titles/descriptions, tags, and usernames with pagination and basic filters.
-- [ ] Add no-result feedback and appropriate database indexes.
+- [x] Add tags and optional validated source URLs.
+- [x] Search titles/descriptions, tags, and usernames with pagination and basic filters.
+- [x] Add no-result feedback and appropriate database indexes.
 
 **Done when:** seeded content is discoverable with stable pagination and validated parameters, without requiring an external search service.
 
@@ -127,4 +127,4 @@ Preserve `btrest/` as V1. Build V2 in new `backend/` and `frontend/` directories
 
 ## Review checkpoint
 
-The user approved tasks 1–4. Those tasks are complete; stop before task 5 until further authorization. The original completion year remains unconfirmed; do not turn the 2022 course-folder reference into a claimed completion date.
+The user approved tasks 1–8. Those tasks are complete; stop before task 9 until further authorization. The original completion year remains unconfirmed; do not turn the 2022 course-folder reference into a claimed completion date.

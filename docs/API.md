@@ -79,6 +79,8 @@ The Django admin uses Django's staff/permission system. It is a trusted administ
 
 ## Same-origin routing
 
-Vite proxies `/api/`, `/admin/`, `/static/`, and `/media/` to Django in development and preview. Use one browser origin throughout an account flow. Production hosting should serve the built SPA with fallback to `index.html`, route these backend prefixes to Django, and configure `FRONTEND_ORIGIN`, allowed hosts, and HTTPS. No permissive CORS is enabled.
+Vite proxies `/api/`, `/admin/`, `/static/`, `/media/`, and WebSockets at `/ws/` to Django/ASGI in development and preview. Use one browser origin throughout an account flow. Production hosting serves the built SPA with fallback to `index.html`, routes API/admin/WebSockets to ASGI, and serves only public media/static prefixes as files. Configure `FRONTEND_ORIGIN`, allowed hosts, and HTTPS. No permissive CORS is enabled.
+
+Messaging endpoints live under `/api/chat/`: conversations, group members, messages, receipts, private attachment upload/download, settings, blocks, reports, and unread summary. Writes are CSRF protected. Messages/reactions allow 60 writes/minute, receipts 120, image uploads 15, reports 10/hour; other chat writes allow 30/minute per IP/endpoint. WebSocket connection attempts allow 20/minute per authenticated user. See [MESSAGING.md](MESSAGING.md) for membership, retry, and privacy behavior.
 
 The portable implementation is described in [DEPLOYMENT.md](DEPLOYMENT.md). Readiness checks database access and the migrations table; it does not replace storage, email, or full journey monitoring.

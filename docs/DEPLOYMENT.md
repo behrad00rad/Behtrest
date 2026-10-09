@@ -7,19 +7,20 @@ Local preflight validates Django production settings and Compose syntax. The loc
 ## Architecture and storage
 
 ```text
-Browser → HTTPS Caddy → /api and /admin → Gunicorn → Django → SQLite
+Browser → HTTPS Caddy → /api and /admin → Uvicorn/ASGI → Django → SQLite
+                      → /ws/chat/    → Channels → Redis (events/presence)
                       → /media       → normalized image files
                       → /static      → collected Django/admin files
                       → other paths  → built React SPA
 ```
 
-Only Caddy publishes ports. Django runs as UID/GID 10001 with a read-only application filesystem and a private port. Vite is used only to build the frontend; the production container serves its compiled files.
+Only Caddy publishes ports. Django runs as UID/GID 10001 with a read-only application filesystem and a private port. Redis has no published port and stores temporary events/presence; messages remain durable in SQLite. Use one ASGI worker for this small-host SQLite setup. Vite is used only to build the frontend; the production container serves its compiled files.
 
 Compose volumes under the default project name `bintrest`:
 
 | Volume | Purpose |
 | --- | --- |
-| `bintrest_data` | `/data/db.sqlite3` and `/data/media`; Caddy reads media, Django writes |
+| `bintrest_data` | `/data/db.sqlite3`, `/data/media`, `/data/private_media`; only `/data/media` is publicly served |
 | `bintrest_static` | Collected admin assets; rebuilt with each release |
 | `bintrest_backups` | Verified database/media ZIP archives; also copy them off the server |
 | `bintrest_caddy_data` | TLS certificate state |
@@ -74,6 +75,8 @@ Uploads are re-encoded as still WebP files; both services limit request sizes. C
 
 ## Backups and recovery
 
+Chat attachments live outside the public media directory. Downloads go through the authenticated API and check active membership and the member's join boundary. Deleted attachments lose API access immediately; failed filesystem deletions and abandoned uploads can be swept with `docker compose exec backend python manage.py chat_cleanup`. Run it daily along with `cleanup_media`. WebSocket connections validate the frontend origin and session, and re-check sessions every 15 seconds. Redis outages fall back to REST refresh; restart Redis/backend to restore live delivery.
+
 Initial recovery target: daily backups (up to 24 hours of data loss), plus a backup before each upgrade. Keep seven daily and four weekly copies, encrypted off-server. A ZIP is not encrypted; these archives contain account hashes, profile information, and images. Keep permissions restricted. A volume on the same server is not a disaster-recovery copy.
 
 Stop writers to capture a consistent database/media pair. In `deploy/`, choose a new filename:
@@ -89,7 +92,7 @@ chmod 600 /srv/secure-backups/bintrest-2026-10-09.zip
 
 Create `/srv/secure-backups` with restricted permissions first. Record the release commit alongside each archive and transfer an encrypted copy to your backup destination. Check each command's exit status; if a backup fails, restart the original services and investigate before an upgrade. `--offline` acknowledges that writers are stopped; the command cannot detect services running elsewhere.
 
-The backup uses SQLite's snapshot API, then validates database integrity, foreign keys, media references, and per-file SHA-256 checksums. It rejects missing referenced media and never overwrites an existing archive. Verification does not mutate the source database. Secrets and TLS state are separate backups.
+The backup uses SQLite's snapshot API, then validates database integrity, foreign keys, public/private media references, and per-file SHA-256 checksums. New archives use format 2 and include chat attachments; verification also accepts older format-1 archives. Archives contain private messages and images, so encrypt off-server copies. It rejects missing referenced media and never overwrites an existing archive. Verification does not mutate the source database. Secrets and TLS state are separate backups.
 
 `python3 scripts/check_recovery.py` runs a complete disposable recovery drill from the repository root: fresh migrations, synthetic seeding, backup, verification, restore, and restored record/media counts. It does not use either normal database.
 

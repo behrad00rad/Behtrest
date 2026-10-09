@@ -7,6 +7,7 @@ import {
   Search as SearchIcon,
   Plus,
   Bookmark,
+  MessageCircle,
 } from "lucide-react";
 import {
   Link,
@@ -21,8 +22,11 @@ import { MyBoards, ProfilePage, BoardDetail } from "./Collections";
 import { Avatar } from "./components";
 import { useAuth } from "./auth";
 import AccountForm from "./AccountForm";
+import Chat from "./Chat";
+import { useChat } from "./ChatContext";
 
 function Header() {
+  const chat = useChat();
   const auth = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -77,6 +81,17 @@ function Header() {
           </Link>
           {auth.user ? (
             <>
+              <Link
+                className="quiet-button"
+                to="/messages"
+                aria-label="Messages"
+              >
+                <MessageCircle size={17} />
+                <span className="nav-label">Messages</span>
+                {chat.unread + chat.requests > 0 && (
+                  <b className="chat-badge">{chat.unread + chat.requests}</b>
+                )}
+              </Link>
               <Link
                 className="quiet-button"
                 to="/boards"
@@ -208,6 +223,22 @@ export default function App() {
           </div>
         ) : (
           <Routes>
+            <Route
+              path="/messages"
+              element={
+                <Protected>
+                  <Chat />
+                </Protected>
+              }
+            />
+            <Route
+              path="/messages/:id"
+              element={
+                <Protected>
+                  <Chat />
+                </Protected>
+              }
+            />
             <Route
               path="/"
               element={

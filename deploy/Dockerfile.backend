@@ -5,8 +5,8 @@ COPY backend/requirements-lock.txt backend/requirements-production.txt ./
 RUN pip install --no-cache-dir -r requirements-production.txt \
     && groupadd --gid 10001 bintrest \
     && useradd --uid 10001 --gid 10001 --no-create-home bintrest \
-    && mkdir -p /data/media /static /backups \
+    && mkdir -p /data/media /data/private_media /static /backups \
     && chown -R bintrest:bintrest /data /static /backups
 COPY backend/ ./
 USER bintrest
-CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "1", "--threads", "4", "--timeout", "60", "--worker-tmp-dir", "/tmp", "--error-logfile", "-"]
+CMD ["uvicorn", "config.asgi:application", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--no-access-log", "--no-proxy-headers"]

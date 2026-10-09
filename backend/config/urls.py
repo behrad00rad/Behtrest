@@ -9,6 +9,7 @@ urlpatterns = [
     path("api/health/", health),
     path("api/ready/", ready),
     path("api/auth/", include("accounts.urls")),
+    path("api/chat/", include("messaging.urls")),
     path("api/", include("collection.urls")),
 ]
 if settings.DEBUG:

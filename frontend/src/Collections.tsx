@@ -313,6 +313,14 @@ export function ProfilePage() {
         <span className="eyebrow">A CURIOUS MIND</span>
         <h1>{profile.display_name || profile.username}</h1>
         <p className="profile-username">@{profile.username}</p>
+        {!own && (
+          <Link
+            className="secondary-button"
+            to={`/messages?to=${encodeURIComponent(profile.username)}`}
+          >
+            Message
+          </Link>
+        )}
         {profile.bio && <p className="profile-bio">{profile.bio}</p>}
         <p className="profile-counts">
           {profile.post_count} pins <span>·</span> {profile.board_count}{" "}

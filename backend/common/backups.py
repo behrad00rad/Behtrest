@@ -26,11 +26,15 @@ def check_database(path, media_names):
         database.execute("SELECT COUNT(*) FROM django_migrations").fetchone()
         names = [name for pair in database.execute("SELECT image, thumbnail FROM collection_post") for name in pair if name]
         names.extend(row[0] for row in database.execute("SELECT avatar FROM accounts_profile") if row[0])
+        if database.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='messaging_attachment'").fetchone():
+            private = [row[0] for row in database.execute("SELECT name FROM messaging_attachment")]
+            if any("private_media/" + name not in media_names for name in private):
+                raise ValueError("A private chat image is missing from the backup.")
         if any("media/" + name not in media_names for name in names):
             raise ValueError("An image referenced by the database is missing from the backup.")
 
 
-def create_backup(database_path, media_root, output):
+def create_backup(database_path, media_root, output, private_root=None):
     database_path, media_root, output = map(lambda p: Path(p).resolve(), (database_path, media_root, output))
     if not database_path.is_file():
         raise ValueError("V2 database does not exist; refusing to create an empty backup.")
@@ -39,6 +43,12 @@ def create_backup(database_path, media_root, output):
     if output.is_relative_to(media_root):
         raise ValueError("Backups must be outside the media directory.")
     media = []
+    if private_root:
+        private_root = Path(private_root).resolve()
+        if output.is_relative_to(private_root): raise ValueError("Backups must be outside private media.")
+        for path in sorted(private_root.rglob("*")):
+            if path.is_symlink(): raise ValueError("Private media symlinks cannot be backed up.")
+            if path.is_file(): media.append((path, "private_media/" + path.relative_to(private_root).as_posix()))
     for path in sorted(media_root.rglob("*")):
         if path.is_symlink():
             raise ValueError("Media symlinks cannot be backed up.")
@@ -50,7 +60,7 @@ def create_backup(database_path, media_root, output):
             source.backup(destination)
         check_database(snapshot, {name for _, name in media})
         entries = [(snapshot, "db.sqlite3"), *media]
-        manifest = {"format": 1, "created_at": datetime.now(timezone.utc).isoformat(), "files": {}}
+        manifest = {"format": 2 if private_root else 1, "created_at": datetime.now(timezone.utc).isoformat(), "files": {}}
         descriptor, partial = tempfile.mkstemp(prefix=".bintrest-", suffix=".partial", dir=output.parent)
         os.close(descriptor)
         try:
@@ -76,13 +86,13 @@ def verify_backup(path):
         if archive.getinfo("manifest.json").file_size > 1024 * 1024:
             raise ValueError("Backup manifest is too large.")
         manifest = json.loads(archive.read("manifest.json"))
-        if manifest.get("format") != 1 or not isinstance(manifest.get("files"), dict):
+        if manifest.get("format") not in {1, 2} or not isinstance(manifest.get("files"), dict):
             raise ValueError("Unsupported backup format.")
         if set(names) != {"manifest.json", *manifest["files"]} or "db.sqlite3" not in names:
             raise ValueError("Archive and manifest do not match.")
         for name, checksum in manifest["files"].items():
             parts = PurePosixPath(name).parts
-            if PurePosixPath(name).as_posix() != name or "\\" in name or ":" in name or name.startswith("/") or ".." in parts or not (name == "db.sqlite3" or name.startswith("media/")):
+            if PurePosixPath(name).as_posix() != name or "\\" in name or ":" in name or name.startswith("/") or ".." in parts or not (name == "db.sqlite3" or name.startswith("media/") or name.startswith("private_media/")):
                 raise ValueError("Unsafe archive member.")
             with archive.open(name) as stream:
                 if digest(stream) != checksum:
@@ -100,7 +110,7 @@ def restore_backup(path, target):
     """Restore only into a new empty directory, never over a working database."""
     manifest = verify_backup(path)
     target = Path(target).resolve()
-    if target.exists() and (not target.is_dir() or any(entry.name != "media" or not entry.is_dir() or entry.is_symlink() or any(entry.iterdir()) for entry in target.iterdir())):
+    if target.exists() and (not target.is_dir() or any(entry.name not in {"media", "private_media"} or not entry.is_dir() or entry.is_symlink() or any(entry.iterdir()) for entry in target.iterdir())):
         raise ValueError("Restore target must be a new or empty directory.")
     target.mkdir(parents=True, exist_ok=True)
     with ZipFile(path) as archive:
@@ -110,6 +120,6 @@ def restore_backup(path, target):
             with archive.open(name) as source, output.open("xb") as destination:
                 import shutil
                 shutil.copyfileobj(source, destination)
-            output.chmod(0o600 if name == "db.sqlite3" else 0o644)
+            output.chmod(0o600 if name == "db.sqlite3" or name.startswith("private_media/") else 0o644)
     (target / "media").mkdir(exist_ok=True)
     return len(manifest["files"])

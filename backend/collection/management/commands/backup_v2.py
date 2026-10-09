@@ -18,7 +18,7 @@ class Command(BaseCommand):
         if settings.DATABASES["default"]["ENGINE"] != "django.db.backends.sqlite3":
             raise CommandError("This command supports only the V2 SQLite deployment.")
         try:
-            count = create_backup(settings.DATABASES["default"]["NAME"], settings.MEDIA_ROOT, options["output"])
+            count = create_backup(settings.DATABASES["default"]["NAME"], settings.MEDIA_ROOT, options["output"], settings.PRIVATE_MEDIA_ROOT)
         except (ValueError, OSError) as error:
             raise CommandError(str(error)) from error
         self.stdout.write(self.style.SUCCESS(f"Verified backup created: {count} files."))

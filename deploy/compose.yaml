@@ -1,5 +1,18 @@
 name: bintrest
 services:
+  redis:
+    image: redis:7-alpine
+    command: [redis-server, --save, "", --appendonly, "no", --maxmemory, 128mb, --maxmemory-policy, allkeys-lru]
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/data]
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 10s
+      timeout: 5s
+      retries: 3
   backend:
     build:
       context: ..
@@ -8,6 +21,9 @@ services:
     environment:
       DJANGO_SETTINGS_MODULE: config.production
       DJANGO_DEBUG: "0"
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      redis: {condition: service_healthy}
     restart: unless-stopped
     read_only: true
     cap_drop: [ALL]

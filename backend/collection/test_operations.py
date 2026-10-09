@@ -85,6 +85,21 @@ class BackupTests(SimpleTestCase):
             create_backup(self.database, self.media, self.archive)
         self.assertFalse(self.archive.exists())
 
+    def test_private_chat_media_round_trip_and_missing_reference(self):
+        private = self.root / "private_media"
+        (private / "chat/1").mkdir(parents=True)
+        (private / "chat/1/image.webp").write_bytes(b"private synthetic image")
+        with closing(sqlite3.connect(self.database)) as database:
+            database.execute("CREATE TABLE messaging_attachment (name TEXT)")
+            database.execute("INSERT INTO messaging_attachment VALUES ('chat/1/image.webp')")
+            database.commit()
+        self.assertEqual(create_backup(self.database, self.media, self.archive, private), 3)
+        restore_backup(self.archive, self.root / "restored")
+        self.assertEqual((self.root / "restored/private_media/chat/1/image.webp").read_bytes(), b"private synthetic image")
+        (private / "chat/1/image.webp").unlink()
+        with self.assertRaisesRegex(ValueError, "private chat image"):
+            create_backup(self.database, self.media, self.root / "missing.zip", private)
+
     def test_tampering_and_path_traversal_are_rejected(self):
         create_backup(self.database, self.media, self.archive)
         broken = self.root / "broken.zip"

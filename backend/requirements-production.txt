@@ -1,2 +1,1 @@
 -r requirements-lock.txt
-gunicorn==26.2.0

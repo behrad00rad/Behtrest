@@ -659,6 +659,9 @@ export function PostDetail() {
         </div>
         <div className="detail-copy">
           <div className="detail-actions">
+            <Link className="quiet-button" to={`/messages?pin=${post.id}`}>
+              Share in chat
+            </Link>
             {post.source_url ? (
               <a
                 className="source-link"

@@ -30,6 +30,7 @@ test-results/
 *.sqlite3
 *.sqlite3-journal
 media/
+private_media/
 staticfiles/
 btrest/back/images/*
 !btrest/back/images/default.jpg

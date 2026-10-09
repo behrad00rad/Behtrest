@@ -116,7 +116,18 @@ Preserve `btrest/` as V1. Build V2 in new `backend/` and `frontend/` directories
 
 **Done when:** deployment instructions are concrete, checks pass, and recovery is documented. Publishing requires a deployment request.
 
-## Deferred ideas
+## Messaging (approved October 9, 2026)
+
+- [x] 12. Add conversations, memberships, messages, reactions, receipts, privacy, blocks/reports, and migrations.
+- [x] 13. Implement permission-checked APIs, persistent UUID sends, message requests, group roles/invitations, and history search.
+- [x] 14. Add Channels/ASGI delivery, session/origin validation, reconnect sync, typing, and approximate presence.
+- [x] 15. Build responsive inbox/conversation screens, profile contact buttons, and pin sharing.
+- [x] 16. Add private images, replies/reactions, editing/deletion, unread receipts, mute/archive, block/report, and privacy controls.
+- [x] 17. Add in-app unread indicators and opt-in browser notifications.
+- [x] 18. Prepare Redis/Uvicorn Docker routing, private media cleanup, backups/restore, and operating docs.
+- [x] 19. Complete backend tests and desktop/mobile reliability/accessibility journeys; final migration/build checks recorded in `docs/VERIFICATION.md`.
+
+## Further ideas
 
 - Following users and a following feed.
 - Reporting/moderation before opening registration broadly.
@@ -124,7 +135,7 @@ Preserve `btrest/` as V1. Build V2 in new `backend/` and `frontend/` directories
 - Personal notes on saves and drag-and-drop organization.
 - Related posts by tag, color browsing, and duplicate-image detection.
 - Optional automatic tagging.
-- Messaging and complex recommendations only if usage justifies them.
+- Complex recommendations only if usage justifies them.
 
 ## Review checkpoint
 

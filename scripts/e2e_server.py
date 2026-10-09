@@ -26,6 +26,10 @@ if __name__ == "__main__":
         call_command("migrate", interactive=False, verbosity=0)
         call_command("seed_demo")
         try:
-            call_command("runserver", "127.0.0.1:8001", use_reloader=False)
+            import uvicorn
+            uvicorn.run("config.asgi:application", host="127.0.0.1", port=8001, access_log=False)
         except KeyboardInterrupt:
             pass
+        finally:
+            from django.db import connections
+            connections.close_all()

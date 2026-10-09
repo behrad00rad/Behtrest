@@ -17,12 +17,13 @@ Connecting React, a Python API, a database, accounts, image uploads, and comment
 - **October 9, 2026, V2 foundation:** completed tasks 1–4: V1 reproduction, Django/React setup, data models, and secure account flows.
 - **October 9, 2026, V2 collections:** completed tasks 5–8: safe image uploads, paginated feeds and comments, profiles, boards, saves, tags, and search.
 - **October 9, 2026, release preparation:** completed task 9's browser automation, accessibility polish, and CI; prepared task 11's portable Docker deployment candidate and verified backup/restore tools. Container runtime verification remains pending because the local Docker engine is unavailable.
+- **October 9, 2026, messaging:** added direct and group conversations, message requests, private image sharing, replies/reactions, read receipts, privacy controls, and real-time delivery while keeping the original source intact.
 
 The original README is preserved verbatim in `docs/README-original.md`, including its wording and acknowledgments. Original source remains unchanged in `btrest/`, with Git tag `legacy-v1` preserving its initial snapshot. V2 lives in separate `backend/` and `frontend/` directories.
 
 ## V2: current state
 
-**Stack:** Django 5.2, SQLite, React 19, Vite, TypeScript, and Tailwind CSS.
+**Stack:** Django 5.2, Channels/ASGI, SQLite, React 19, Vite, TypeScript, and Tailwind CSS. Production uses Redis for live events and temporary presence.
 
 Implemented:
 
@@ -39,7 +40,9 @@ Implemented:
 - Tags, validated source links, pin and people search, and empty/error/retry states.
 - 24 repeatable synthetic illustration posts; failed media deletions have a durable retry queue.
 - Automated desktop/mobile browser journeys and accessibility checks, plus CI for backend, frontend, and container smoke checks.
-- A Docker/Caddy/Gunicorn deployment candidate, production configuration checks, database readiness, and verified V2 backup/restore commands.
+- Direct and group messaging, requests, replies, reactions, edits/deletion, pin sharing, private image attachments, search, unread badges, mute/archive, block/report, typing, presence, and sent/delivered/read receipts.
+- Opt-in browser notifications, privacy preferences, UUID send retries, and reconnect/history synchronization.
+- A Docker/Caddy/Uvicorn/Redis deployment candidate, production configuration checks, database readiness, and verified V2 backup/restore commands including private chat images.
 
 Private boards hide their collections; the original pins remain public. Local development uses filesystem media storage. Retry failed deletions with `python backend/manage.py cleanup_media` using the project virtual environment.
 
@@ -68,7 +71,7 @@ cd ..
 Start Django in one terminal:
 
 ```powershell
-.\.venv\Scripts\python.exe backend/manage.py runserver 127.0.0.1:8000
+.\.venv\Scripts\python.exe -m uvicorn config.asgi:application --app-dir backend --host 127.0.0.1 --port 8000 --reload --no-access-log
 ```
 
 Start React in another:
@@ -94,7 +97,7 @@ Admin is available at `http://127.0.0.1:5173/admin/`. Synthetic demo accounts ha
 ```powershell
 .\.venv\Scripts\python.exe backend/manage.py check
 .\.venv\Scripts\python.exe backend/manage.py makemigrations --check --dry-run
-.\.venv\Scripts\python.exe backend/manage.py test accounts collection
+.\.venv\Scripts\python.exe backend/manage.py test accounts collection messaging
 cd frontend
 npm run format:check
 npm run build
@@ -102,11 +105,17 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-54 backend tests are verified, Django reported no issues or migration drift, and the frontend formatting/production build checks passed. Both desktop and mobile end-to-end journeys pass, including registration, uploads, comments, private boards, profile/avatar editing, pagination, search, error recovery, and logout. Automated axe checks found no WCAG A/AA violations in the tested screens; these checks complement manual review.
+Backend tests, Django checks, migration drift, frontend formatting/build, and desktop/mobile browser journeys cover the account/collection and two-person messaging flows. See the verification record for counts and results. Automated axe checks complement manual review.
 
 The browser runner creates a separate temporary V2 database/media directory and uses ports 8001/5174. It never reuses normal preview data. If the browser download is unavailable and Edge is installed, run `$env:BINTREST_BROWSER_CHANNEL='msedge'` before `npm run test:e2e`. CI uses bundled Chromium. See [verification details](docs/VERIFICATION.md) and [API conventions](docs/API.md).
 
 ![V2 inspiration feed](docs/screenshots/v2-verified-feed-desktop.png)
+
+### Messaging
+
+Open Messages, contact someone from their profile, or share a pin directly into a conversation. See [messaging behavior and operation](docs/MESSAGING.md) for requests, groups, receipts, privacy, retries, and private media cleanup.
+
+![V2 conversations](docs/screenshots/v2-chat-desktop.png)
 
 ## Original version (v1)
 

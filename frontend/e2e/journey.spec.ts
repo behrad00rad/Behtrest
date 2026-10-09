@@ -80,6 +80,12 @@ test("register → upload → comment → private board → profile → logout",
   ).toBeVisible();
   const postURL = page.url();
   await accessible(page);
+  await page.screenshot({
+    path: `../artifacts/pin-${testInfo.project.name}.png`,
+  });
+  await page.getByLabel("View full image").click();
+  await expect(page.getByRole("dialog")).toBeVisible();
+  await page.keyboard.press("Escape");
   await page.getByLabel("Your comment").fill("A little thought, kept.");
   await page.getByRole("button", { name: "Post comment", exact: true }).click();
   await expect(
@@ -105,6 +111,16 @@ test("register → upload → comment → private board → profile → logout",
   ).toBeVisible();
   const boardURL = page.url();
   await accessible(page);
+  await page
+    .getByLabel("Search board pins", { exact: true })
+    .fill("missing pin");
+  await expect(page.locator(".pin-card")).toHaveCount(0);
+  await page.getByLabel("Search board pins", { exact: true }).fill("");
+  await expect(page.locator(".pin-card")).toHaveCount(1);
+  await page.screenshot({
+    path: `../artifacts/board-${testInfo.project.name}.png`,
+  });
+  await page.getByRole("button", { name: "Organize", exact: true }).click();
   await page
     .getByRole("button", { name: "Use A blue beginning as board cover" })
     .click();
@@ -137,11 +153,27 @@ test("register → upload → comment → private board → profile → logout",
   await expect(
     page.getByRole("heading", { name: "Curious blues" }),
   ).toBeVisible();
+  await page.screenshot({
+    path: `../artifacts/profile-${testInfo.project.name}.png`,
+  });
+  await page.getByLabel("Search boards", { exact: true }).fill("not a board");
+  await expect(page.locator(".board-card")).toHaveCount(0);
+  await page.getByLabel("Search boards", { exact: true }).fill("");
+  await expect(page.locator(".board-card")).toHaveCount(1);
+  await page.goto("/search?kind=posts&tag=curious&sort=oldest");
+  await expect(
+    page.locator(`a.pin-title[href="${new URL(postURL).pathname}"]`),
+  ).toBeVisible();
+  await accessible(page);
+  await page.screenshot({
+    path: `../artifacts/search-${testInfo.project.name}.png`,
+  });
   await accessible(page);
   await page.getByLabel("Search pins and people").fill(username);
   await page.getByRole("button", { name: "Search", exact: true }).click();
+  await expect(page).toHaveURL(new RegExp(`/search\\?q=${username}$`));
   await expect(
-    page.getByRole("link", { name: "A blue beginning", exact: true }),
+    page.locator(`a.pin-title[href="${new URL(postURL).pathname}"]`),
   ).toBeVisible();
   await page.getByRole("button", { name: "People", exact: true }).click();
   await expect(
@@ -170,6 +202,8 @@ test("register → upload → comment → private board → profile → logout",
   await expect(
     page.getByRole("heading", { name: "No matching pins. Try another idea." }),
   ).toBeVisible();
+  if (test.info().project.name === "mobile")
+    await page.getByLabel("Account menu").click();
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Welcome back." }),

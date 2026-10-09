@@ -50,6 +50,25 @@ class OwnershipTests(MediaTestCase):
         self.client.force_login(self.owner)
         self.token = self.client.get("/api/auth/session/").json()["data"]["csrfToken"]
 
+    def test_board_search_cannot_expose_private_boards(self):
+        public = Board.objects.create(owner=self.owner, name="Public inspiration", is_private=False)
+        path = f"/api/boards/?owner={self.owner.username}&q=inspiration"
+        self.assertEqual([x["id"] for x in self.client.get(path).json()["data"]["items"]], [public.pk])
+        self.assertEqual(self.client.get(path + "&privacy=private").json()["data"]["items"], [])
+        self.login_owner()
+        self.assertEqual([x["id"] for x in self.client.get(path + "&privacy=private").json()["data"]["items"]], [self.board.pk])
+        self.assertEqual(self.client.get(path + "&privacy=invalid").status_code, 400)
+
+    def test_pin_search_and_sort_in_feed_and_board(self):
+        self.login_owner()
+        second = Post.objects.create(owner=self.owner, title="Green", image=self.image())
+        SavedPost.objects.create(board=self.board, post=second)
+        for path in (f"/api/feed/?owner={self.owner.username}", f"/api/boards/{self.board.pk}/posts/?"):
+            separator = "&" if not path.endswith("?") else ""
+            self.assertEqual([x["id"] for x in self.client.get(path + separator + "sort=oldest").json()["data"]["items"]], [self.post.pk, second.pk])
+            self.assertEqual([x["id"] for x in self.client.get(path + separator + "q=green").json()["data"]["items"]], [second.pk])
+            self.assertEqual(self.client.get(path + separator + "sort=invalid").status_code, 400)
+
     def test_other_user_cannot_edit_or_delete_owned_records(self):
         for path, values in ((f"/api/posts/{self.post.pk}/", {"title": "Stolen"}), (f"/api/comments/{self.comment.pk}/", {"text": "Stolen"}), (f"/api/boards/{self.board.pk}/manage/", {"name": "Stolen"})):
             self.assertEqual(self.send(path, data=values).status_code, 404)

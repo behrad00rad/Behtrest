@@ -80,6 +80,40 @@ Task 9 is complete. Task 11 is prepared for review with container runtime verifi
 
 ## Messaging verification, October 9, 2026
 
+### Minimal visual redesign, October 10, 2026
+
+Follow-up visual adjustment: restored 10px control radii and 14px panel/image/message radii at the user's request. Replaced pale charcoal/indigo colors with deep navy (`#0b1220`), blue surfaces (`#111f33`, `#1b304a`), saturated action blue (`#1765c1`), and brighter secondary/focus colors. Production build and formatting passed; the live profile and desktop Messages screenshot were reviewed.
+
+All four desktop/mobile browser journeys passed again after this adjustment, including their Axe A/AA contrast and overflow checks.
+
+- Added a shared visual layer based on the requested charcoal (`#1d202a`), off-white (`#fafaff`), indigo (`#273469`), and navy (`#1e2749`) palette. Added lighter charcoal surfaces and pale indigo text/focus colors for readable contrast; brown (`#784a31`) is a restrained illustration accent.
+- Removed decorative outlines, shadows, rounded card frames, and pill-shaped controls across profiles, boards, pin details, navigation, search, and Messages. Images and collection frames are square; controls use a 3px radius and message bubbles 4px. Separation comes from tonal surfaces, spacing, and typography. Avatars remain circular.
+- Removed the outer chat frame and profile card background, simplified create/account forms, and retained visible keyboard focus and validation indicators.
+- The full four-journey desktop/mobile run passed with Axe A/AA and overflow checks. Final desktop frame/form refinements were also checked in a focused rerun. Production build and frontend formatting passed. Screenshots and the live local profile were inspected; no backend or data migration was needed.
+
+![Minimal desktop messaging](screenshots/v2-minimal-chat-desktop.png)
+
+### Product polish 1–4, October 10, 2026
+
+- Pin details now include a full-image viewer, copy-link/chat sharing, searchable save destinations, clearer comment metadata and menus, and responsive image/action layouts.
+- Profiles and boards use compact headers and searchable pin/board lists. Owners can filter public/private collections, sort saved pins, and enter Organize mode to choose covers or remove saves. Private-board sharing remains restricted.
+- Search supports Pins/People, empty-query tag discovery, tag-only results, combined query/tag filters, and newest/oldest ordering. Filter changes have distinct pagination scopes.
+- Messages retain text/reply/pin drafts and pending send identifiers in tab-scoped session storage, clear drafts on sign-out, and recover idempotent retries after reload. Unuploaded files are not persisted. Added unread/latest navigation and a paginated shared photos/pins viewer with links back to message history.
+- All **70 backend tests passed**, including new checks for private board search, ordering, unread anchors, history seek permissions, and shared-photo join boundaries/deletion. Django checks and migration drift passed; no schema migration was introduced.
+- All four desktop/mobile journeys pass across the final full run (both messaging journeys and desktop collection journey) and the focused mobile collection rerun. New browser coverage verifies draft reload, retry after a lost response and reload, shared-photo filters/jump, unread/latest shortcuts, image viewing, board search/organization, profile board search, and tag-only ordering. Axe A/AA and document-overflow checks pass on the tested screens. The final mobile rerun corrected an ambiguous assertion against two synthetic pins with the same title.
+- Frontend production build, formatting, and diff whitespace checks passed. Screenshots of pin details, boards, profiles, search, and messaging were reviewed at desktop/mobile dimensions. Tests use disposable databases/media; the normal preview API was restarted to load the new endpoints.
+
+### Messages UX rebuild, October 9, 2026
+
+- Replaced the fixed-height chat with a viewport-sized inbox/conversation workspace. Desktop uses independent inbox/history scrolling; phones show an inbox or conversation, hide bottom navigation while chatting, and keep the composer on screen. Removed an inherited 125px header minimum that initially pushed the phone composer below the viewport.
+- Added avatars, timestamps, unread badges, grouped message bubbles, date separators, contextual action menus, image previews, keyboard sending (Enter / Shift+Enter), and a collapsible history search. Message menus open upward near the bottom of the timeline. Existing requests, receipts, replies, reactions, private photos, sharing, group administration, mute/archive, block/report, and retry behavior remain supported.
+- Inbox and recipient/invitation pickers use the authenticated people API. Search supports partial usernames, display names, and an optional leading @; selected recipients appear as removable chips. Requests are debounced and stale results are discarded. Selecting a person reuses their existing direct conversation.
+- Simplified the feed heading and tag strip, added active desktop navigation and a mobile account menu, and corrected mobile navigation text contrast. The original blue theme and project history remain intact.
+- Verified the desktop chat journey and both account/collection journeys in the final full run. The mobile chat journey passed a focused rerun after the header-height fix. All four desktop/mobile journeys therefore pass across the final verification runs. Chat tests now explicitly exercise inbox partial-username lookup, profile contact lookup, group recipient selection, app edit/delete dialogs, and the composer's viewport bounds, alongside the existing live/retry/private-image/accessibility coverage.
+- Frontend production build and formatting passed. Screenshots were inspected on desktop and phone dimensions; the real local preview was also reviewed. Browser tests use disposable databases/media, not legacy or normal preview data. No backend schema changes or public deployment were made.
+
+### Original messaging implementation verification
+
 - Final full backend run: **66 tests passed** across accounts, collections, and messaging. New coverage checks requests, idempotent sends, outsider rejection, group admin transfer/join boundaries/removal, blocks, privacy/read-watermark behavior, reactions/replies/edits/tombstones, private image permissions/deletion, and reports/search/archive. ASGI tests reject hostile origins and anonymous cookies and revoke a logged-out session. Five focused WebSocket/backup tests also passed after the final rate-gate/archive-format changes.
 - Final full browser run: **4 journeys passed** (existing account/collection flow and two-person messaging, each on desktop/mobile Edge). Chat coverage includes live delivery within the normal five-second assertion timeout, requests/acceptance, private images and anonymous download rejection, edits/reactions/replies, reload recovery, search, groups, blocks/unblocks, and attachment deletion. Three concurrent sends with the same UUID returned the same persisted message; a deliberately lost HTTP response retried without creating a duplicate.
 - Axe A/AA checks found no violations on the tested chat screen; no horizontal document overflow at desktop/mobile sizes. Screenshots were visually inspected. The Messages icon remains visible when mobile navigation text is hidden.

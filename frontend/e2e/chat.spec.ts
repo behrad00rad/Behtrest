@@ -38,11 +38,31 @@ test("two people: requests, live messages, image, edit, reaction, group and bloc
   try {
     await register(page, alice);
     await register(peer, bob);
+    await page.goto("/messages");
+    await page
+      .getByLabel("Search conversations and people")
+      .fill("@" + bob.slice(0, -3));
+    await page
+      .getByRole("button", { name: `Choose @${bob}`, exact: true })
+      .click();
+    await expect(page).toHaveURL(/\/messages\/\d+$/);
+    const searchedURL = page.url();
     await page.goto(`/messages?to=${bob}`);
+    await page
+      .getByRole("button", { name: `Choose @${bob}`, exact: true })
+      .click();
     await page
       .getByRole("button", { name: "Start conversation", exact: true })
       .click();
-    await expect(page.getByText("Live", { exact: true })).toBeVisible();
+    await expect(page).toHaveURL(searchedURL);
+    await expect(page.locator(".connection-status")).toHaveText("Live");
+    await page
+      .getByLabel("Message", { exact: true })
+      .fill("A draft worth keeping");
+    await page.reload();
+    await expect(page.getByLabel("Message", { exact: true })).toHaveValue(
+      "A draft worth keeping",
+    );
     await page
       .getByLabel("Message", { exact: true })
       .fill("Hello from a little blue world");
@@ -57,6 +77,12 @@ test("two people: requests, live messages, image, edit, reaction, group and bloc
       "Hello from a little blue world",
     );
     await peer.getByRole("button", { name: "Accept conversation" }).click();
+    await peer
+      .getByRole("button", { name: "Jump to unread", exact: true })
+      .click();
+    await expect(
+      peer.getByText("Unread messages", { exact: true }),
+    ).toBeVisible();
     await expect(peer.getByLabel("Message", { exact: true })).toBeEnabled();
     await peer.getByLabel("Message", { exact: true }).fill("Hello back, live!");
     await peer
@@ -105,6 +131,10 @@ test("two people: requests, live messages, image, edit, reaction, group and bloc
     await expect(
       page.getByRole("button", { name: "Retry send", exact: true }),
     ).toBeEnabled();
+    await page.reload();
+    await expect(
+      page.getByRole("button", { name: "Retry send", exact: true }),
+    ).toBeEnabled();
     await page.getByRole("button", { name: "Retry send", exact: true }).click();
     await expect(
       page
@@ -133,11 +163,35 @@ test("two people: requests, live messages, image, edit, reaction, group and bloc
       ).status(),
     ).toBe(401);
     await anonymous.close();
+    await page.getByRole("button", { name: "Details", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Shared photos & pins", exact: true })
+      .click();
+    await expect(
+      page.getByRole("img", { name: "Shared photo", exact: true }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Pins", exact: true }).click();
+    await expect(
+      page.getByRole("heading", { name: "Nothing shared here yet" }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Photos", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Show in conversation", exact: true })
+      .click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+    await expect(
+      page.getByRole("img", { name: "Shared chat image" }),
+    ).toBeVisible();
     const first = page
       .locator(".chat-message")
       .filter({ hasText: "Hello from a little blue world" });
-    page.once("dialog", (d) => d.accept("Edited hello"));
+    await first.getByLabel("Message actions").click();
     await first.getByRole("button", { name: "Edit", exact: true }).click();
+    await page
+      .getByRole("dialog")
+      .getByLabel("Message", { exact: true })
+      .fill("Edited hello");
+    await page.getByRole("button", { name: "Save edit" }).click();
     await expect(peer.getByRole("log")).toContainText("Edited hello");
     const edited = peer
       .locator(".chat-message")
@@ -145,6 +199,7 @@ test("two people: requests, live messages, image, edit, reaction, group and bloc
     await edited.locator("summary").click();
     await edited.getByRole("button", { name: "React ❤️", exact: true }).click();
     await expect(page.getByLabel("Reactions").first()).toContainText("❤️");
+    await edited.getByLabel("Message actions").click();
     await edited.getByRole("button", { name: "Reply", exact: true }).click();
     await peer
       .getByLabel("Message", { exact: true })
@@ -155,10 +210,16 @@ test("two people: requests, live messages, image, edit, reaction, group and bloc
     await expect(page.locator("blockquote")).toContainText("Edited hello");
     await page.reload();
     await expect(page.getByRole("log")).toContainText("A threaded thought");
+    await page
+      .getByRole("button", { name: "Search this conversation" })
+      .click();
     await page.getByLabel("Search messages").fill("private blue");
     await expect(page.getByRole("log")).toContainText("A private blue image");
     await expect(page.getByRole("log")).not.toContainText("A threaded thought");
-    await page.getByLabel("Search messages").fill("");
+    await page
+      .getByRole("button", { name: "Jump to latest", exact: true })
+      .click();
+    await expect(page.getByRole("log")).toContainText("A threaded thought");
     const axe = await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
       .analyze();
@@ -173,15 +234,30 @@ test("two people: requests, live messages, image, edit, reaction, group and bloc
         () => document.documentElement.scrollWidth <= innerWidth,
       ),
     ).toBeTruthy();
+    const composerBox = await page
+      .getByLabel("Message", { exact: true })
+      .boundingBox();
+    expect(composerBox).not.toBeNull();
+    expect(composerBox!.y + composerBox!.height).toBeLessThanOrEqual(
+      page.viewportSize()!.height,
+    );
     await page.screenshot({
       path: `../artifacts/chat-${info.project.name}.png`,
     });
-    await page.getByRole("button", { name: "New conversation" }).click();
+    if (info.project.name === "mobile")
+      await page.getByRole("link", { name: "Back to inbox" }).click();
+    await page
+      .getByRole("button", { name: "New conversation", exact: true })
+      .first()
+      .click();
     await page.getByLabel("Group conversation").check();
     await page
       .getByLabel("Group name", { exact: true })
       .fill("Little blue club");
-    await page.getByLabel("Usernames, separated by commas").fill(bob);
+    await page.getByLabel("Find people").fill(bob.slice(0, -3));
+    await page
+      .getByRole("button", { name: `Choose @${bob}`, exact: true })
+      .click();
     await page
       .getByRole("button", { name: "Start conversation", exact: true })
       .click();
@@ -207,16 +283,25 @@ test("two people: requests, live messages, image, edit, reaction, group and bloc
     await peer.getByRole("button", { name: "Block person" }).click();
     await page.goto(url);
     await expect(page.getByLabel("Message", { exact: true })).toBeDisabled();
+    if (info.project.name === "mobile")
+      await peer.getByRole("link", { name: "Back to inbox" }).click();
     await peer.getByRole("button", { name: "Privacy", exact: true }).click();
     await peer.getByRole("button", { name: "Unblock", exact: true }).click();
     await peer.getByRole("button", { name: "Close dialog" }).click();
     await expect(page.getByLabel("Message", { exact: true })).toBeEnabled();
-    page.once("dialog", (d) => d.accept());
+    const imageMessage = page
+      .locator(".chat-message")
+      .filter({ hasText: "A private blue image" });
+    await imageMessage.getByLabel("Message actions").click();
     await page
       .locator(".chat-message")
       .filter({ hasText: "A private blue image" })
       .getByRole("button", { name: "Delete", exact: true })
       .click();
+    await page
+      .getByRole("button", { name: "Delete message", exact: true })
+      .click();
+    if (info.project.name === "mobile") await peer.goto(url);
     await expect(
       peer.getByRole("img", { name: "Shared chat image" }),
     ).toHaveCount(0);

@@ -160,6 +160,13 @@ def messages(request, pk):
         q = request.GET.get("q", "").strip()
         if len(q) > 100: raise ApiError("invalid_filter", "Search must be at most 100 characters.")
         if q: query = query.filter(text__icontains=q, deleted_at__isnull=True)
+        if request.GET.get("around"):
+            try: anchor_id = int(request.GET["around"])
+            except ValueError: raise ApiError("invalid_filter", "Choose a valid message.")
+            if q: raise ApiError("invalid_filter", "Clear search before jumping to a message.")
+            anchor = get_object_or_404(query, pk=anchor_id)
+            # Seek to the anchor; the signed older-history cursor remains usable normally.
+            query = query.filter(id__lte=anchor.pk)
         items, cursor = paginate(query, request, ["messages", pk, request.user.pk, own.joined_after_id, q])
         return success({"items": [message_data(item, request.user) for item in items], "next_cursor": cursor})
     validate_keys(request.data, ["text", "client_id", "pin_id", "reply_id", "attachment_id"])
@@ -189,6 +196,20 @@ def messages(request, pk):
         own.save(update_fields=["archived"])
     notify(pk, request.user.pk)
     return success(message_data(visible_messages(own).get(pk=item.pk), request.user), 201)
+
+
+@endpoint(["GET"], authenticated=True)
+def shared_media(request, pk):
+    own = member(request.user, pk)
+    kind = request.GET.get("kind", "all")
+    if kind not in ("all", "photos", "pins"):
+        raise ApiError("invalid_filter", "Choose photos, pins, or all shared items.")
+    query = visible_messages(own).filter(deleted_at__isnull=True)
+    photos = Q(attachment__isnull=False)
+    pins = Q(pin__isnull=False, pin__owner__is_active=True)
+    query = query.filter(photos if kind == "photos" else pins if kind == "pins" else photos | pins).select_related("attachment")
+    items, cursor = paginate(query, request, ["shared-media", pk, request.user.pk, own.joined_after_id, kind])
+    return success({"items": [message_data(item, request.user) for item in items], "next_cursor": cursor})
 
 
 @endpoint(["GET", "PATCH", "DELETE"], authenticated=True, rate=(60, 60))

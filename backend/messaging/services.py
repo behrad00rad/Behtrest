@@ -93,6 +93,8 @@ def conversation_data(membership):
         "can_send": writable,
         "blocked": conversation.kind == "direct" and any(blocked(membership.user_id, item.user_id) for item in members if item.user_id != membership.user_id),
         "unread": visible_messages(membership).filter(id__gt=membership.last_read_id).exclude(sender=membership.user).count(),
+        "first_unread_id": visible_messages(membership).filter(id__gt=membership.last_read_id).exclude(sender=membership.user).order_by("id").values_list("id", flat=True).first(),
+        "last_read_id": membership.last_read_id,
         "last_message": message_data(last, membership.user) if last else None,
         "updated_at": conversation.updated_at.isoformat(),
     }

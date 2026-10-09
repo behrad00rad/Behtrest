@@ -80,6 +80,9 @@ def feed(request):
     text = request.GET.get('q', '').strip()
     tag = request.GET.get('tag', '').strip().lower()
     owner = request.GET.get('owner', '').strip().lower()
+    sort = request.GET.get('sort', 'newest')
+    if sort not in ('newest', 'oldest'):
+        raise ApiError('invalid_filter', 'Choose newest or oldest pins.')
     if len(text) > 100 or len(tag) > 40 or len(owner) > 150:
         raise ApiError('invalid_filter', 'Search text or filters are too long.')
     if tag and not re.fullmatch(r'[a-z0-9_-]{1,40}', tag):
@@ -90,7 +93,7 @@ def feed(request):
         query = query.filter(tags__name=tag)
     if owner:
         query = query.filter(owner__username=owner)
-    items, cursor = paginate(query, request, {'kind': 'feed', 'q': text, 'tag': tag, 'owner': owner})
+    items, cursor = paginate(query, request, {'kind': 'feed', 'q': text, 'tag': tag, 'owner': owner, 'sort': sort}, ascending=sort == 'oldest')
     return success({'items': [post_data(post) for post in items], 'next_cursor': cursor})
 
 
@@ -189,7 +192,15 @@ def boards(request):
     query = Board.objects.filter(owner__username=owner, owner__is_active=True).select_related('owner', 'cover__owner')
     if not request.user.is_authenticated or request.user.username != owner:
         query = query.filter(is_private=False)
-    items, cursor = paginate(query, request, {'kind': 'boards', 'owner': owner, 'viewer': request.user.pk if request.user.is_authenticated else None})
+    text = request.GET.get('q', '').strip()
+    privacy = request.GET.get('privacy', 'all')
+    if len(text) > 100 or privacy not in ('all', 'public', 'private'):
+        raise ApiError('invalid_filter', 'Choose a valid board search and visibility.')
+    if text:
+        query = query.filter(Q(name__icontains=text) | Q(description__icontains=text))
+    if privacy != 'all':
+        query = query.filter(is_private=privacy == 'private')
+    items, cursor = paginate(query, request, {'kind': 'boards', 'owner': owner, 'q': text, 'privacy': privacy, 'viewer': request.user.pk if request.user.is_authenticated else None})
     return success({'items': [board_data(item) for item in items], 'next_cursor': cursor})
 
 
@@ -226,7 +237,13 @@ def board_owner_actions(request, pk):
 def board_posts(request, pk):
     board = visible_board(request, pk)
     query = board.saved_posts.filter(post__owner__is_active=True).select_related('post__owner__profile').prefetch_related('post__tags')
-    items, cursor = paginate(query, request, {'kind': 'board-posts', 'board': pk})
+    text = request.GET.get('q', '').strip()
+    sort = request.GET.get('sort', 'newest')
+    if len(text) > 100 or sort not in ('newest', 'oldest'):
+        raise ApiError('invalid_filter', 'Choose a valid pin search and sort order.')
+    if text:
+        query = query.filter(Q(post__title__icontains=text) | Q(post__description__icontains=text) | Q(post__tags__name__icontains=text)).distinct()
+    items, cursor = paginate(query, request, {'kind': 'board-posts', 'board': pk, 'q': text, 'sort': sort}, ascending=sort == 'oldest')
     return success({'items': [post_data(item.post) for item in items], 'next_cursor': cursor})
 
 

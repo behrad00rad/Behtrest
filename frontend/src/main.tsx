@@ -5,6 +5,9 @@ import { AuthProvider } from "./auth";
 import App from "./App";
 import { ChatProvider } from "./ChatContext";
 import "./styles.css";
+import "./messenger.css";
+import "./product.css";
+import "./minimal.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

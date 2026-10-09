@@ -3,7 +3,8 @@ import type { ReactNode, FormEvent } from "react";
 import { Link } from "react-router-dom";
 import { ArrowRight, Bookmark, Check, Lock, Plus, X } from "lucide-react";
 import { ApiError, request } from "./api";
-import { usePage } from "./hooks";
+import { useDebouncedValue, usePage } from "./hooks";
+import { SearchField } from "./ProductUI";
 import type { Author, Board, Post } from "./types";
 
 export function message(error: unknown) {
@@ -41,10 +42,12 @@ export function Modal({
   title,
   close,
   children,
+  busy = false,
 }: {
   title: string;
   close: () => void;
   children: ReactNode;
+  busy?: boolean;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const id = useId();
@@ -64,10 +67,12 @@ export function Modal({
     <dialog
       ref={ref}
       className="modal"
+      role="dialog"
+      aria-modal="true"
       aria-labelledby={id}
       onCancel={(event) => {
         event.preventDefault();
-        close();
+        if (!busy) close();
       }}
       onClick={(event) => {
         if (event.target === event.currentTarget) {
@@ -78,7 +83,7 @@ export function Modal({
             event.clientY < box.top ||
             event.clientY > box.bottom
           )
-            close();
+            if (!busy) close();
         }
       }}
     >
@@ -88,6 +93,7 @@ export function Modal({
           className="icon-button"
           aria-label="Close dialog"
           onClick={close}
+          disabled={busy}
         >
           <X size={20} />
         </button>
@@ -173,7 +179,9 @@ export function BoardForm({
   );
 }
 export function SaveDialog({ post, close }: { post: Post; close: () => void }) {
-  const page = usePage<Board>("/boards/");
+  const [query, setQuery] = useState("");
+  const settled = useDebouncedValue(query);
+  const page = usePage<Board>(`/boards/?q=${encodeURIComponent(settled)}`);
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState<number | null>(null);
   const [saved, setSaved] = useState<Board | null>(null);
@@ -200,6 +208,7 @@ export function SaveDialog({ post, close }: { post: Post; close: () => void }) {
             : "Save to a board"
       }
       close={close}
+      busy={busy !== null}
     >
       {saved ? (
         <div className="saved-state">
@@ -234,6 +243,12 @@ export function SaveDialog({ post, close }: { post: Post; close: () => void }) {
             <span>{post.title}</span>
           </div>
           <ErrorNotice error={error || page.error} />
+          <SearchField
+            value={query}
+            change={setQuery}
+            label="Find a board"
+            placeholder="Search your boards"
+          />
           <div className="board-options">
             {page.items.map((board) => (
               <button
@@ -257,6 +272,13 @@ export function SaveDialog({ post, close }: { post: Post; close: () => void }) {
               </button>
             ))}
           </div>
+          {!page.loading && !page.error && !page.items.length && (
+            <p className="muted save-empty">
+              {query
+                ? "No boards match that search."
+                : "Create a board to keep this pin."}
+            </p>
+          )}
           {page.loading && (
             <p className="muted" role="status">
               Loading boards…
@@ -292,10 +314,14 @@ export function PostGrid({
   endpoint,
   empty = "No pins here yet.",
   action,
+  emptyDescription = "Good collections start with a little curiosity.",
+  emptyAction,
 }: {
   endpoint: string;
   empty?: string;
   action?: (post: Post) => ReactNode;
+  emptyDescription?: string;
+  emptyAction?: ReactNode;
 }) {
   const page = usePage<Post>(endpoint);
   const [saving, setSaving] = useState<Post | null>(null);
@@ -336,15 +362,17 @@ export function PostGrid({
                 Save
               </button>
             </div>
-            <Link className="pin-title" to={`/posts/${post.id}`}>
-              {post.title}
-            </Link>
-            <div className="pin-owner">
-              <Link to={`/u/${encodeURIComponent(post.owner.username)}`}>
-                <Avatar author={post.owner} size="tiny" />
-                {post.owner.display_name || post.owner.username}
+            <div className="pin-card-content">
+              <Link className="pin-title" to={`/posts/${post.id}`}>
+                {post.title}
               </Link>
-              {action?.(post)}
+              <div className="pin-owner">
+                <Link to={`/u/${encodeURIComponent(post.owner.username)}`}>
+                  <Avatar author={post.owner} size="tiny" />
+                  <span>{post.owner.display_name || post.owner.username}</span>
+                </Link>
+                {action?.(post)}
+              </div>
             </div>
           </article>
         ))}
@@ -369,10 +397,12 @@ export function PostGrid({
         <div className="empty-state">
           <Bookmark size={32} />
           <h2>{empty}</h2>
-          <p>Good collections start with a little curiosity.</p>
-          <Link className="text-link" to="/create">
-            Share your first pin <ArrowRight size={16} />
-          </Link>
+          <p>{emptyDescription}</p>
+          {emptyAction || (
+            <Link className="text-link" to="/create">
+              Share your first pin <ArrowRight size={16} />
+            </Link>
+          )}
         </div>
       )}
       <div ref={sentinel} className="feed-status">

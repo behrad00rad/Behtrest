@@ -16,11 +16,14 @@ import {
   Pencil,
   Plus,
   Trash2,
+  LayoutGrid,
+  Globe,
 } from "lucide-react";
 import { request, upload } from "./api";
 import type { User } from "./api";
 import { useAuth } from "./auth";
-import { usePage, useResource } from "./hooks";
+import { useDebouncedValue, usePage, useResource } from "./hooks";
+import { SearchField, ShareControl } from "./ProductUI";
 import type { Board, Post, Profile } from "./types";
 import {
   Avatar,
@@ -41,7 +44,12 @@ function BoardsList({
   own: boolean;
   changed?: () => void;
 }) {
-  const page = usePage<Board>(`/boards/?owner=${encodeURIComponent(owner)}`);
+  const [query, setQuery] = useState("");
+  const [privacy, setPrivacy] = useState("all");
+  const settled = useDebouncedValue(query);
+  const page = usePage<Board>(
+    `/boards/?owner=${encodeURIComponent(owner)}&q=${encodeURIComponent(settled)}&privacy=${privacy}`,
+  );
   const [creating, setCreating] = useState(false);
   return (
     <>
@@ -55,6 +63,35 @@ function BoardsList({
             <Plus size={16} />
             New board
           </button>
+        )}
+      </div>
+      <div className="product-toolbar">
+        <SearchField value={query} change={setQuery} label="Search boards" />
+        {own && (
+          <div className="tabs board-visibility">
+            {["all", "public", "private"].map((value) => (
+              <button
+                key={value}
+                aria-pressed={privacy === value}
+                className={privacy === value ? "active" : ""}
+                onClick={() => setPrivacy(value)}
+              >
+                {value === "all" ? (
+                  "All boards"
+                ) : value === "private" ? (
+                  <>
+                    <Lock size={14} />
+                    Private
+                  </>
+                ) : (
+                  <>
+                    <Globe size={14} />
+                    Public
+                  </>
+                )}
+              </button>
+            ))}
+          </div>
         )}
       </div>
       <div className="boards-grid">
@@ -79,19 +116,39 @@ function BoardsList({
       {!page.loading && !page.error && !page.items.length && (
         <div className="empty-state">
           <Bookmark size={32} />
-          <h2>A place for your next obsession.</h2>
+          <h2>
+            {query || privacy !== "all"
+              ? "No matching boards"
+              : own
+                ? "Start your first collection"
+                : "No public boards yet"}
+          </h2>
           <p>
-            {own
-              ? "Create a board and give your ideas a home."
-              : "No public boards here yet."}
+            {query || privacy !== "all"
+              ? "Try another search or show all boards."
+              : own
+                ? "Create a board and give your ideas a home."
+                : "No public boards here yet."}
           </p>
-          {own && (
+          {query || privacy !== "all" ? (
             <button
               className="secondary-button"
-              onClick={() => setCreating(true)}
+              onClick={() => {
+                setQuery("");
+                setPrivacy("all");
+              }}
             >
-              Create your first board <Plus size={16} />
+              Show all boards
             </button>
+          ) : (
+            own && (
+              <button
+                className="secondary-button"
+                onClick={() => setCreating(true)}
+              >
+                Create your first board <Plus size={16} />
+              </button>
+            )
           )}
         </div>
       )}
@@ -122,14 +179,11 @@ function BoardsList({
 export function MyBoards() {
   const { user } = useAuth();
   return (
-    <main className="collection-page">
+    <main className="collection-page product-page boards-page">
       <div className="page-heading">
         <div>
-          <span className="eyebrow">IDEAS, WITH A HOME</span>
-          <h1>
-            Your little <em>collections.</em>
-          </h1>
-          <p>Keep a mood, plan a project, or follow a feeling.</p>
+          <h1>Your boards</h1>
+          <p>Your ideas, organized. Private boards are visible only to you.</p>
         </div>
       </div>
       {user && <BoardsList owner={user.username} own />}
@@ -217,7 +271,7 @@ function EditProfile({
   }
   const currentAvatar = auth.user?.profile.avatar;
   return (
-    <Modal title="A little more you" close={close}>
+    <Modal title="Edit profile" busy={busy} close={close}>
       <div className="avatar-editor">
         <Avatar
           author={{
@@ -289,6 +343,8 @@ export function ProfilePage() {
   const [params, setParams] = useSearchParams();
   const tab = params.get("tab") === "boards" ? "boards" : "pins";
   const [editing, setEditing] = useState(false);
+  const [pinQuery, setPinQuery] = useState("");
+  const settledPins = useDebouncedValue(pinQuery);
   const profile = resource.data;
   if (resource.loading && !profile)
     return (
@@ -307,10 +363,9 @@ export function ProfilePage() {
     );
   const own = auth.user?.id === profile.id;
   return (
-    <main className="collection-page">
+    <main className="collection-page product-page profile-page">
       <section className="profile-header">
         <Avatar author={profile} />
-        <span className="eyebrow">A CURIOUS MIND</span>
         <h1>{profile.display_name || profile.username}</h1>
         <p className="profile-username">@{profile.username}</p>
         {!own && (
@@ -349,11 +404,56 @@ export function ProfilePage() {
           Boards
         </button>
       </div>
+      {tab === "pins" && (
+        <div className="product-toolbar">
+          <SearchField
+            value={pinQuery}
+            change={setPinQuery}
+            label="Search profile pins"
+            placeholder="Find a created pin"
+          />
+          {own && (
+            <Link className="secondary-button" to="/create">
+              <Plus size={16} />
+              Create pin
+            </Link>
+          )}
+        </div>
+      )}
       {tab === "pins" ? (
         <PostGrid
-          endpoint={`/feed/?owner=${encodeURIComponent(profile.username)}`}
+          endpoint={`/feed/?owner=${encodeURIComponent(profile.username)}&q=${encodeURIComponent(settledPins)}`}
           empty={
-            own ? "Share the things that move you." : "No pins here just yet."
+            pinQuery
+              ? "No matching pins"
+              : own
+                ? "Create your first pin"
+                : "No pins here just yet."
+          }
+          emptyDescription={
+            pinQuery
+              ? "Try another word or clear the search."
+              : own
+                ? "Upload an image and share an idea worth keeping."
+                : "Come back to see what they share next."
+          }
+          emptyAction={
+            pinQuery ? (
+              <button
+                className="secondary-button"
+                onClick={() => setPinQuery("")}
+              >
+                Clear pin search
+              </button>
+            ) : own ? (
+              <Link className="secondary-button" to="/create">
+                Create pin <Plus size={16} />
+              </Link>
+            ) : (
+              <Link className="secondary-button" to="/">
+                Explore pins
+              </Link>
+            )
           }
         />
       ) : (
@@ -384,6 +484,10 @@ export function BoardDetail() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [version, setVersion] = useState(0);
+  const [organizing, setOrganizing] = useState(false);
+  const [query, setQuery] = useState("");
+  const settled = useDebouncedValue(query);
+  const [sort, setSort] = useState("newest");
   const navigate = useNavigate();
   const board = resource.data;
   async function removeBoard() {
@@ -451,12 +555,19 @@ export function BoardDetail() {
     );
   const own = board.owner === auth.user?.username;
   return (
-    <main className="collection-page">
+    <main className="collection-page product-page board-detail-page">
       <Link className="back-link" to={`/u/${board.owner}?tab=boards`}>
         <ArrowLeft size={16} />
         All collections by @{board.owner}
       </Link>
       <section className="board-heading">
+        <div className="board-hero-cover">
+          {board.cover ? (
+            <img src={board.cover} alt="" />
+          ) : (
+            <Bookmark size={38} />
+          )}
+        </div>
         <span className="eyebrow">
           {board.is_private ? (
             <>
@@ -467,6 +578,9 @@ export function BoardDetail() {
             "A COLLECTION OF GOOD IDEAS"
           )}
         </span>
+        {!board.is_private && (
+          <ShareControl title="board" path={`/boards/${board.id}`} />
+        )}
         <h1>{board.name}</h1>
         {board.description && <p>{board.description}</p>}
         <span className="muted">
@@ -502,17 +616,70 @@ export function BoardDetail() {
           </div>
         )}
       </section>
+      <div className="product-toolbar">
+        <SearchField
+          value={query}
+          change={setQuery}
+          label="Search board pins"
+        />
+        <div className="toolbar-filters">
+          <label>
+            Sort
+            <select
+              aria-label="Sort board pins"
+              value={sort}
+              onChange={(e) => setSort(e.target.value)}
+            >
+              <option value="newest">Newest saved</option>
+              <option value="oldest">Oldest saved</option>
+            </select>
+          </label>
+          {own && (
+            <button
+              className="secondary-button"
+              disabled={!board.post_count}
+              aria-pressed={organizing}
+              onClick={() => setOrganizing((v) => !v)}
+            >
+              <LayoutGrid size={16} />
+              {organizing ? "Done organizing" : "Organize"}
+            </button>
+          )}
+        </div>
+      </div>
+      {organizing && (
+        <p className="organize-notice" role="status">
+          Choose a cover or remove pins from this board. Original pins stay
+          available.
+        </p>
+      )}
       <ErrorNotice error={!editing && !deleting && !removing ? error : ""} />
       <PostGrid
         key={`${board.id}-${version}`}
-        endpoint={`/boards/${board.id}/posts/`}
-        empty="A little room for your next idea."
+        endpoint={`/boards/${board.id}/posts/?q=${encodeURIComponent(settled)}&sort=${sort}`}
+        empty={query ? "No matching pins" : "Your next idea belongs here"}
+        emptyDescription={
+          query
+            ? "Try another search or clear the filter."
+            : "Save pins to this board as you explore."
+        }
+        emptyAction={
+          query ? (
+            <button className="secondary-button" onClick={() => setQuery("")}>
+              Clear pin search
+            </button>
+          ) : (
+            <Link className="secondary-button" to="/">
+              Find pins to save <ArrowRight size={16} />
+            </Link>
+          )
+        }
         action={
-          own
+          own && organizing
             ? (post) => (
                 <div className="board-pin-actions">
                   <button
-                    className="icon-button"
+                    className="board-action-button"
                     aria-label={`Use ${post.title} as board cover`}
                     title="Use as cover"
                     aria-pressed={board.cover_post_id === post.id}
@@ -524,9 +691,14 @@ export function BoardDetail() {
                     ) : (
                       <ImagePlus size={14} />
                     )}
+                    <span>
+                      {board.cover_post_id === post.id
+                        ? "Cover selected"
+                        : "Set cover"}
+                    </span>
                   </button>
                   <button
-                    className="icon-button"
+                    className="board-action-button"
                     aria-label={`Remove ${post.title} from board`}
                     title="Remove from board"
                     onClick={() => {
@@ -535,6 +707,7 @@ export function BoardDetail() {
                     }}
                   >
                     <Trash2 size={14} />
+                    <span>Remove</span>
                   </button>
                 </div>
               )

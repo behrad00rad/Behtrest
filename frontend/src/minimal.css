@@ -1,0 +1,559 @@
+/* Rich navy surfaces, clear blue actions, and softly rounded controls. */
+:root {
+  --surface-0: #0b1220;
+  --surface-1: #111f33;
+  --surface-2: #1b304a;
+  --text-primary: #f4f8ff;
+  --text-secondary: #b6c9e2;
+  --text-muted: #a0b7d3;
+  --accent-strong: #1765c1;
+  --accent-soft: #78b9ff;
+  --line-subtle: transparent;
+  --line-strong: transparent;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --shadow-soft: none;
+  color: var(--text-primary);
+  background: var(--surface-0);
+}
+body {
+  background: var(--surface-0);
+  color: var(--text-primary);
+}
+/* Route focus lands here after navigation, rather than outlining the page. */
+#main-content:focus {
+  outline: none;
+}
+.messenger .chat-layout,
+.create-layout {
+  border: 0;
+  border-radius: 14px;
+  box-shadow: none;
+  background: #0b1220;
+}
+.messenger .chat-inbox {
+  background: #111f33;
+  border-right: 0;
+}
+body:has(.messaging-content) .site-header {
+  background: #0b1220;
+}
+.create-layout {
+  padding: 24px 0;
+}
+.upload-zone {
+  background: #1b304a;
+  border-color: transparent;
+  border-radius: 10px;
+}
+.upload-zone:hover {
+  background: #244264;
+}
+.form-stack :is(input:not([type="checkbox"]), textarea, select) {
+  background: #1b304a;
+  border-color: transparent;
+  color: #f4f8ff;
+}
+.form-stack :is(input, textarea, select)[aria-invalid="true"] {
+  border-color: #cf8b85;
+}
+.product-page .profile-tabs {
+  border: 0;
+}
+.art-panel {
+  background: #12345a;
+}
+.art-panel h1,
+.art-panel h1 em,
+.form-wrap h2 {
+  color: #f4f8ff;
+}
+.art-panel > p,
+.form-description,
+.form-footnote,
+.form-switch {
+  color: #b6c9e2;
+}
+.form-wrap h2 {
+  font-family: var(--font-sans);
+  font-size: 30px;
+  letter-spacing: -0.03em;
+}
+.form-options a,
+.form-switch a {
+  color: #78b9ff;
+}
+.note {
+  background: #784a31;
+  color: #f4f8ff;
+}
+::selection {
+  background: #1765c1;
+  color: #f4f8ff;
+}
+/* Remove decorative outlines without removing focus or validation feedback. */
+:is(
+  .site-header,
+  .site-footer,
+  .mobile-nav,
+  .page-heading,
+  .section-heading,
+  .filter-bar,
+  .filter-chips,
+  .product-toolbar,
+  .search-filters,
+  .tabs,
+  .profile-header,
+  .board-heading,
+  .board-card,
+  .pin-card,
+  .post-detail,
+  .detail-actions,
+  .detail-author,
+  .comments-section,
+  .comment,
+  .comment-form,
+  .empty-state,
+  .workspace-card,
+  .account-strip,
+  .chat-sidebar,
+  .chat-room,
+  .chat-room-header,
+  .inbox-header,
+  .inbox-footer,
+  .chat-folders,
+  .chat-member,
+  .conversation-row,
+  .chat-composer,
+  .message-bubble,
+  .chat-pin,
+  .chat-date span,
+  .message-reactions button,
+  .shared-media-item,
+  .person-card,
+  .person-result,
+  .recipient-chip,
+  .modal,
+  .modal-heading,
+  .product-share-panel,
+  .message-menu-panel,
+  .comment-actions > div,
+  .owner-actions > div,
+  .mobile-account-panel,
+  .messenger-search,
+  .product-search,
+  .header-search,
+  .composer-input-row,
+  .primary-button,
+  .secondary-button,
+  .quiet-button,
+  .icon-button,
+  .nav-create,
+  .nav-join,
+  .tag,
+  .active-filter > span
+) {
+  border-color: transparent !important;
+  box-shadow: none !important;
+}
+:is(
+  button,
+  input,
+  textarea,
+  select,
+  .primary-button,
+  .secondary-button,
+  .quiet-button,
+  .nav-create,
+  .nav-join,
+  .brand-mark,
+  .header-search,
+  .product-search,
+  .messenger-search,
+  .composer-input-row,
+  .modal,
+  .product-share-panel,
+  .message-menu-panel,
+  .mobile-account-panel,
+  .recipient-chip,
+  .active-filter > span,
+  .tag,
+  .chat-pin,
+  .chat-date span
+) {
+  border-radius: 10px !important;
+}
+:is(
+  .pin-image,
+  .pin-image img,
+  .board-card,
+  .board-card img,
+  .board-preview,
+  .board-hero-cover,
+  .post-detail,
+  .detail-image,
+  .detail-image img,
+  .profile-header,
+  .board-heading,
+  .person-card,
+  .workspace-card,
+  .shared-media-item,
+  .shared-media-item img,
+  .chat-image,
+  .conversation-row,
+  .empty-state,
+  .comment-form,
+  .art-card
+) {
+  border-radius: 14px !important;
+}
+.site-header {
+  background: var(--surface-0);
+}
+.site-header .brand-mark {
+  background: #f4f8ff;
+  color: #0b1220;
+}
+.site-header .brand-dot {
+  color: #78b9ff;
+}
+.site-header :is(.header-search, .quiet-button.active) {
+  background: var(--surface-1);
+}
+.site-header .header-search {
+  color: #b6c9e2;
+}
+.site-header .header-search input {
+  color: #f4f8ff;
+}
+.site-header nav .quiet-button {
+  color: #b6c9e2;
+  background: transparent;
+}
+.site-header nav .quiet-button.active {
+  color: #f4f8ff;
+  background: #1b304a;
+}
+:is(.primary-button, .nav-create, .nav-join) {
+  background: #1765c1 !important;
+  color: #f4f8ff !important;
+  font-weight: 600;
+}
+:is(.primary-button, .nav-create, .nav-join):hover {
+  background: #2379de !important;
+}
+:is(.secondary-button, .messenger .chat-member button) {
+  background: #1b304a !important;
+  color: #f4f8ff !important;
+}
+.quiet-button {
+  color: #78b9ff;
+}
+:is(.product-page, .detail-page, .explore-page, .story-page) :is(h1, h2, h3) {
+  font-family: var(--font-sans);
+  color: #f4f8ff;
+  letter-spacing: -0.035em;
+}
+.eyebrow {
+  color: #b6c9e2;
+  letter-spacing: 0.08em;
+}
+:is(.product-page, .explore-page) .page-heading p {
+  color: #b6c9e2;
+}
+.product-page .profile-header {
+  background: transparent;
+  padding: 16px 0 28px;
+  margin-bottom: 16px;
+}
+.product-page .board-heading {
+  background: #111f33;
+}
+.product-page .board-card {
+  background: transparent;
+  padding: 0;
+}
+.product-page .board-card:hover {
+  background: transparent;
+  transform: none;
+}
+.product-page .board-card .board-preview {
+  background: #1b304a;
+}
+.product-page .board-card :is(h2, h3) {
+  color: #f4f8ff;
+}
+.product-page .board-card :is(p, small) {
+  color: #b6c9e2;
+}
+.product-toolbar {
+  padding: 12px 0 20px;
+}
+:is(.product-search, .messenger-search, .header-search) {
+  background: #1b304a !important;
+  color: #78b9ff !important;
+}
+:is(.product-search, .messenger-search, .header-search) input {
+  color: #f4f8ff;
+  background: transparent;
+}
+input::placeholder,
+textarea::placeholder {
+  color: #b6c9e2 !important;
+  opacity: 1;
+}
+:is(
+  .field input,
+  .field textarea,
+  .field select,
+  .toolbar-filters select,
+  .search-filters select,
+  .comment-form textarea,
+  .post-form input,
+  .post-form textarea,
+  .post-form select
+) {
+  background: #1b304a;
+  color: #f4f8ff;
+  border-color: transparent;
+}
+:is(.tabs, .chat-folders) button {
+  color: #b6c9e2 !important;
+  background: transparent !important;
+  border-radius: 14px !important;
+}
+:is(.tabs button.active, .chat-folders button[aria-pressed="true"]) {
+  color: #f4f8ff !important;
+  background: #1b304a !important;
+  border-bottom-color: transparent !important;
+}
+.filter-chips :is(button, a),
+.tag,
+.active-filter > span {
+  background: #1b304a !important;
+  color: #d5e7ff !important;
+  border-color: transparent !important;
+  border-radius: 10px !important;
+}
+.filter-chips :is(button, a).active {
+  background: #1765c1 !important;
+  color: #f4f8ff !important;
+}
+.detail-page .post-detail {
+  background: #111f33;
+}
+.detail-page .detail-image {
+  background: #171a23;
+}
+.detail-page .detail-copy {
+  background: #111f33;
+}
+.detail-page .detail-actions {
+  background: #111f33;
+}
+.detail-page .detail-author {
+  background: transparent;
+  padding-top: 18px;
+}
+.detail-page .comments-section {
+  margin-top: 24px;
+  padding-top: 24px;
+}
+.detail-page .comment {
+  background: #2d3241;
+  padding: 14px;
+  margin: 10px 0;
+}
+.detail-page .comment-form {
+  background: transparent;
+  padding: 16px 0 0;
+}
+.detail-page .comment-form textarea {
+  background: #1b304a;
+}
+.detail-page :is(.comment-author, .comment p) {
+  color: #f4f8ff;
+}
+.product-share summary {
+  background: #1b304a;
+  color: #f4f8ff;
+  border: 0;
+  border-radius: 10px;
+}
+:is(
+  .modal,
+  .product-share-panel,
+  .message-menu-panel,
+  .mobile-account-panel,
+  .comment-actions > div,
+  .owner-actions > div
+) {
+  background: #1b304a !important;
+  color: #f4f8ff;
+}
+.modal-backdrop {
+  background: #11131dcc;
+}
+.person-card {
+  background: #111f33 !important;
+}
+.avatar,
+.group-avatar {
+  background: #1b304a !important;
+  color: #d5e7ff !important;
+}
+.avatar {
+  border-radius: 50%;
+}
+.mobile-nav {
+  background: #111f33;
+}
+.mobile-nav a {
+  color: #b6c9e2;
+}
+.mobile-nav a.active {
+  color: #f4f8ff;
+}
+.mobile-nav .mobile-create {
+  background: #1765c1;
+  color: #f4f8ff;
+  border-radius: 10px;
+}
+.messenger {
+  background: #0b1220;
+}
+.messenger .chat-sidebar {
+  background: #111f33;
+}
+.messenger :is(.chat-room, .chat-timeline) {
+  background: #0b1220;
+}
+.messenger .chat-room-header {
+  background: #111f33;
+}
+.messenger .conversation-row {
+  margin: 0;
+}
+.messenger .conversation-row:hover {
+  background: #1b304a;
+}
+.messenger .conversation-row.selected {
+  background: #12345a;
+}
+.messenger .conversation-row strong,
+.messenger .chat-room-header h2 {
+  color: #f4f8ff;
+}
+.messenger
+  :is(
+    .conversation-preview,
+    .conversation-top time,
+    .room-heading > span,
+    .message-meta,
+    .message-sender,
+    .inbox-empty p,
+    .connection-status
+  ) {
+  color: #b6c9e2;
+}
+.messenger .icon-button {
+  background: transparent;
+  color: #78b9ff;
+}
+.messenger .icon-button:hover {
+  background: #1b304a;
+}
+.messenger .compose-new {
+  background: #1765c1;
+  color: #f4f8ff;
+}
+.messenger .message-bubble {
+  background: #1b304a;
+  color: #f4f8ff;
+  border-radius: 14px !important;
+}
+.messenger .own .message-bubble {
+  background: #1765c1;
+}
+.messenger .message-bubble blockquote {
+  background: #0b122080;
+  border-left: 2px solid #78b9ff;
+}
+.messenger .chat-pin {
+  background: #12345a;
+}
+.messenger .chat-date span {
+  background: transparent;
+  color: #b6c9e2;
+}
+.message-reactions button {
+  background: #1b304a;
+  color: #f4f8ff;
+}
+.message-reactions button[aria-pressed="true"] {
+  background: #1765c1;
+}
+.messenger .chat-composer {
+  background: #0b1220;
+}
+.messenger .composer-input-row {
+  background: #1b304a;
+}
+.messenger .composer-input-row textarea {
+  color: #f4f8ff;
+}
+.messenger .composer-send {
+  background: #1765c1;
+  color: #f4f8ff;
+}
+.messenger .chat-request {
+  background: #12345a;
+  color: #f4f8ff;
+}
+.messenger .chat-request p {
+  color: #78b9ff;
+}
+.messenger .shared-media-item {
+  background: #111f33;
+}
+.message-menu-panel button {
+  color: #f4f8ff;
+}
+.message-menu-panel button:hover {
+  background: #12345a;
+}
+:is(a, button, input, textarea, select, summary):focus-visible {
+  outline: 2px solid #78b9ff !important;
+  outline-offset: 3px;
+}
+:is(
+  .product-search,
+  .messenger-search,
+  .header-search,
+  .composer-input-row
+):focus-within {
+  outline: 2px solid #78b9ff;
+  outline-offset: 2px;
+}
+.empty-state {
+  background: transparent;
+}
+.site-footer {
+  color: #a0b7d3;
+}
+@media (max-width: 650px) {
+  .product-page .profile-header {
+    padding: 8px 0 24px;
+  }
+  .detail-page .detail-actions {
+    background: #111f33;
+  }
+  .site-header:has(.header-search) {
+    min-height: 104px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+  body:has(.messenger) .site-header {
+    min-height: 62px;
+  }
+}

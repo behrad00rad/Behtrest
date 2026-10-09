@@ -8,6 +8,7 @@ import {
 import type { ReactNode } from "react";
 import { ApiError, getSession, request } from "./api";
 import type { Session, User } from "./api";
+import { clearUserDrafts } from "./chatDrafts";
 
 type AuthState = {
   user: User | null;
@@ -42,10 +43,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function signOut() {
     try {
       const session = await request<Session>("/auth/logout/", "POST", {});
+      if (user) clearUserDrafts(user.id);
       setUser(session.user);
     } catch (error) {
-      if (error instanceof ApiError && error.status === 401) setUser(null);
-      else throw error;
+      if (error instanceof ApiError && error.status === 401) {
+        if (user) clearUserDrafts(user.id);
+        setUser(null);
+      } else throw error;
     }
   }
   return (

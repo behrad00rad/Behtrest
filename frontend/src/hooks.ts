@@ -2,6 +2,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { request } from "./api";
 import type { Page } from "./types";
 
+export function useDebouncedValue<T>(value: T, delay = 250) {
+  const [settled, setSettled] = useState(value);
+  useEffect(() => {
+    const timer = setTimeout(() => setSettled(value), delay);
+    return () => clearTimeout(timer);
+  }, [value, delay]);
+  return settled;
+}
+
 export function useResource<T>(path: string) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);

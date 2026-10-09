@@ -127,7 +127,34 @@ Preserve `btrest/` as V1. Build V2 in new `backend/` and `frontend/` directories
 - [x] 18. Prepare Redis/Uvicorn Docker routing, private media cleanup, backups/restore, and operating docs.
 - [x] 19. Complete backend tests and desktop/mobile reliability/accessibility journeys; final migration/build checks recorded in `docs/VERIFICATION.md`.
 
+## Messages UX rebuild (approved October 9, 2026)
+
+- [x] Replace the chat layout with a complete inbox/conversation workspace and a reachable mobile composer.
+- [x] Add working partial-username/name search, recipient selection, and searchable group invitations.
+- [x] Group messages, add date separators and contextual actions, and improve composer/attachment/request feedback.
+- [x] Improve feed hierarchy and desktop/mobile navigation while preserving the blue theme and project history.
+- [x] Verify desktop/mobile messaging and the existing account/collection journeys, accessibility, production build, and formatting. See `docs/VERIFICATION.md` for the final runs and mobile layout repair.
+
+## Product polish 1–4 (approved October 9, completed October 10, 2026)
+
+- [x] 1. Improve pin details, save/share controls, full-image viewing, comment actions, and mobile layout.
+- [x] 2. Improve profiles and boards, searchable collections, visibility filters, and an explicit Organize mode for covers/removal.
+- [x] 3. Add a dedicated search screen, tag discovery, tag filters, newest/oldest ordering, and useful result/empty states.
+- [x] 4. Add per-conversation session drafts, retry recovery after reload, unread/latest navigation, and permission-checked shared photos/pins.
+
+Draft text and retry metadata are stored in the current browser tab and cleared on sign-out. Unuploaded image files cannot survive a reload. Verification is recorded in `docs/VERIFICATION.md`.
+
+## Minimal visual redesign (approved October 10, 2026)
+
+- [x] Replace decorative card borders and pill shapes with tonal surfaces and small control radii.
+- [x] Apply charcoal/off-white/indigo colors across navigation, collections, pin details, forms, and messaging.
+- [x] Flatten profile and chat frames; preserve visible keyboard focus and validation feedback.
+
 ## Further ideas
+
+### Visual adjustment, October 10, 2026
+
+Restored rounded corners at the user's request: 10px controls and 14px images, panels, and message bubbles. Replaced the muted charcoal/indigo palette with deep navy backgrounds and saturated blue actions while retaining contrast-based separation.
 
 - Following users and a following feed.
 - Reporting/moderation before opening registration broadly.

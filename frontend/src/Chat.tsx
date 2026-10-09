@@ -1,6 +1,20 @@
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import {
+  ArrowLeft,
+  Search,
+  SquarePen,
+  Settings2,
+  MessageCircle,
+  Users,
+  Send,
+  ImagePlus,
+  X,
+  Info,
+  ShieldCheck,
+  ArrowDown,
+} from "lucide-react";
+import {
   Link,
   useNavigate,
   useParams,
@@ -11,13 +25,17 @@ import { useAuth } from "./auth";
 import { useChat } from "./ChatContext";
 import { Avatar, ErrorNotice, Modal, message } from "./components";
 import type { Author, Page } from "./types";
+import { PeoplePicker, PeopleResults } from "./PeopleSearch";
+import ChatMessage from "./ChatMessage";
+import SharedMedia from "./SharedMedia";
+import { clearDraft, draftKey, readDraft, writeDraft } from "./chatDrafts";
 type Member = Author & {
   role: string;
   accepted: boolean;
   last_read_id: number | null;
   last_delivered_id: number;
 };
-type Msg = {
+export type Msg = {
   id: number;
   sender: Author;
   text: string;
@@ -42,6 +60,8 @@ type Conversation = {
   can_send: boolean;
   unread: number;
   last_message: Msg | null;
+  first_unread_id: number | null;
+  last_read_id: number;
 };
 type Prefs = {
   contact_policy: string;
@@ -49,7 +69,6 @@ type Prefs = {
   show_read_receipts: boolean;
   browser_notifications: boolean;
 };
-const emojis = ["❤️", "👍", "😂", "✨", "😮", "😢"];
 export default function Chat() {
   const { user } = useAuth(),
     live = useChat(),
@@ -73,16 +92,56 @@ export default function Chat() {
     [revision, setRevision] = useState(0);
   const [newChat, setNewChat] = useState(false),
     [group, setGroup] = useState(false),
-    [names, setNames] = useState(""),
+    [selectedPeople, setSelectedPeople] = useState<Author[]>([]),
+    [initialPerson, setInitialPerson] = useState(""),
     [title, setTitle] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false),
     [prefs, setPrefs] = useState<Prefs | null>(null),
     [blockedUsers, setBlockedUsers] = useState<Author[]>([]);
+  const [editing, setEditing] = useState<Msg | null>(null),
+    [editText, setEditText] = useState(""),
+    [reporting, setReporting] = useState<Msg | null>(null),
+    [reportReason, setReportReason] = useState(""),
+    [renaming, setRenaming] = useState(false),
+    [renameText, setRenameText] = useState(""),
+    [confirmation, setConfirmation] = useState<{
+      title: string;
+      body: string;
+      action: string;
+      run: () => Promise<boolean>;
+    } | null>(null);
   const [typing, setTyping] = useState(false),
     [online, setOnline] = useState<number[]>([]),
     [manage, setManage] = useState(false),
-    [invite, setInvite] = useState(""),
+    [invitePeople, setInvitePeople] = useState<Author[]>([]),
     [notice, setNotice] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [listLoading, setListLoading] = useState(true);
+  const [dialogBusy, setDialogBusy] = useState(false);
+  const [mediaOpen, setMediaOpen] = useState(false);
+  const [awayFromBottom, setAwayFromBottom] = useState(false);
+  const [unreadTarget, setUnreadTarget] = useState<number | null>(null);
+  const [historyAnchor, setHistoryAnchor] = useState<number | null>(null);
+  const unreadCaptured = useRef(false);
+  const scrollTarget = useRef<number | null>(null);
+  const currentDraftKey = draftKey(user?.id, id);
+  const composer = useRef<HTMLTextAreaElement>(null);
+  const [imagePreview, setImagePreview] = useState("");
+  useEffect(() => {
+    if (!image) {
+      setImagePreview("");
+      return;
+    }
+    const url = URL.createObjectURL(image);
+    setImagePreview(url);
+    return () => URL.revokeObjectURL(url);
+  }, [image]);
+  useEffect(() => {
+    if (composer.current) {
+      composer.current.style.height = "auto";
+      composer.current.style.height = `${Math.min(composer.current.scrollHeight, 130)}px`;
+    }
+  }, [text, conversation]);
   const timeline = useRef<HTMLDivElement>(null),
     sendKey = useRef<string | null>(null),
     pendingAttachment = useRef<number | null>(null),
@@ -98,9 +157,10 @@ export default function Chat() {
         "Conversation";
   useEffect(() => {
     const controller = new AbortController();
+    setListLoading(true);
     const t = setTimeout(() => {
       request<Page<Conversation>>(
-        `/chat/conversations/?folder=${folder}&q=${encodeURIComponent(search)}`,
+        `/chat/conversations/?folder=${folder}&q=${encodeURIComponent(search.trim().replace(/^@/, ""))}`,
         "GET",
         undefined,
         true,
@@ -109,9 +169,13 @@ export default function Chat() {
         .then((p) => {
           setList(p.items);
           setListCursor(p.next_cursor);
+          setListLoading(false);
         })
         .catch((e) => {
-          if (!controller.signal.aborted) setError(message(e));
+          if (!controller.signal.aborted) {
+            setError(message(e));
+            setListLoading(false);
+          }
         });
     }, 200);
     return () => {
@@ -124,22 +188,31 @@ export default function Chat() {
     setMessages([]);
     messagesRef.current = [];
     setCursor(null);
-    setReply(null);
+    const draft = readDraft(currentDraftKey);
+    setReply(draft.reply || null);
     setImage(null);
-    setText("");
+    setText(draft.text);
     setFilter("");
     setError("");
     setOnline([]);
     setTyping(false);
+    setSearchOpen(false);
+    setManage(false);
+    setMediaOpen(false);
+    setAwayFromBottom(false);
+    setUnreadTarget(null);
+    setHistoryAnchor(null);
+    unreadCaptured.current = false;
+    scrollTarget.current = null;
     receipt.current = "";
-    sendKey.current = null;
-    pendingAttachment.current = null;
+    sendKey.current = draft.clientId || null;
+    pendingAttachment.current = draft.attachmentId || null;
     const value = Number(params.get("pin"));
-    setPin(value > 0 ? value : null);
+    setPin(value > 0 ? value : draft.pin || null);
   }, [id]);
   useEffect(() => {
     if (params.get("to") && !id) {
-      setNames(params.get("to")!);
+      setInitialPerson(params.get("to")!);
       setNewChat(true);
     }
   }, [params, id]);
@@ -162,7 +235,7 @@ export default function Chat() {
           controller.signal,
         );
         let p = await request<Page<Msg>>(
-          `${base}messages/?q=${encodeURIComponent(filter)}`,
+          `${base}messages/?q=${encodeURIComponent(filter)}${historyAnchor ? `&around=${historyAnchor}` : ""}`,
           "GET",
           undefined,
           true,
@@ -189,18 +262,35 @@ export default function Chat() {
         if (controller.signal.aborted) return;
         const newest = collected[0];
         setConversation(c);
+        if (!unreadCaptured.current) {
+          setUnreadTarget(c.first_unread_id);
+          unreadCaptured.current = true;
+        }
         setMessages(collected.reverse());
         setCursor(p.next_cursor);
-        if (bottom)
+        if (scrollTarget.current) {
+          const target = scrollTarget.current;
+          requestAnimationFrame(() => {
+            timeline.current
+              ?.querySelector(`[data-message-id="${target}"]`)
+              ?.scrollIntoView({ block: "center" });
+          });
+          scrollTarget.current = null;
+        } else if (bottom && !historyAnchor)
           requestAnimationFrame(() =>
             timeline.current?.scrollTo({ top: timeline.current.scrollHeight }),
           );
-        const key = `${newest?.id}:${document.visibilityState}`;
+        const key = `${newest?.id}:${document.visibilityState}:${bottom && !filter && !historyAnchor}`;
         if (newest && receipt.current !== key) {
           receipt.current = key;
           await request(`${base}receipts/`, "POST", {
             message_id: newest.id,
-            read: !document.hidden && c.accepted,
+            read:
+              !document.hidden &&
+              c.accepted &&
+              bottom &&
+              !filter &&
+              !historyAnchor,
           });
         }
       } catch (e) {
@@ -215,7 +305,7 @@ export default function Chat() {
     }
     void sync();
     return () => controller.abort();
-  }, [id, filter, live.version, revision]);
+  }, [id, filter, historyAnchor, awayFromBottom, live.version, revision]);
   useEffect(() => {
     if (!id) return;
     const ask = () =>
@@ -231,6 +321,7 @@ export default function Chat() {
         live.event.members?.filter((m) => m.online).map((m) => m.user_id) || [],
       );
     if (live.event.type === "typing") {
+      if (live.event.user_id === user?.id) return;
       setTyping(!!live.event.active);
       const t = setTimeout(() => setTyping(false), 3000);
       return () => clearTimeout(t);
@@ -281,9 +372,34 @@ export default function Chat() {
       const c = await request<Conversation>(
         "/chat/conversations/",
         "POST",
-        group ? { usernames: names, title } : { username: names },
+        group
+          ? {
+              usernames: selectedPeople.map((p) => p.username).join(","),
+              title,
+            }
+          : { username: selectedPeople[0]?.username },
       );
       setNewChat(false);
+      setFolder(c.accepted ? "inbox" : "requests");
+      setRevision((v) => v + 1);
+      navigate(
+        `/messages/${c.id}${params.get("pin") ? `?pin=${params.get("pin")}` : ""}`,
+      );
+    } catch (e) {
+      setError(message(e));
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function startDirect(person: Author) {
+    if (busy) return;
+    setBusy(true);
+    setError("");
+    try {
+      const c = await request<Conversation>("/chat/conversations/", "POST", {
+        username: person.username,
+      });
+      setSearch("");
       setFolder(c.accepted ? "inbox" : "requests");
       setRevision((v) => v + 1);
       navigate(
@@ -301,6 +417,15 @@ export default function Chat() {
     setBusy(true);
     setError("");
     sendKey.current ||= crypto.randomUUID();
+    const rememberSend = () =>
+      writeDraft(currentDraftKey, {
+        text,
+        clientId: sendKey.current,
+        attachmentId: pendingAttachment.current,
+        reply,
+        pin,
+      });
+    rememberSend();
     try {
       if (image && !pendingAttachment.current) {
         const form = new FormData();
@@ -308,6 +433,7 @@ export default function Chat() {
         pendingAttachment.current = (
           await upload<{ id: number }>(`${base}attachments/`, form, () => {})
         ).id;
+        rememberSend();
       }
       const data: Record<string, string | number> = {
         text,
@@ -323,6 +449,9 @@ export default function Chat() {
       setReply(null);
       setImage(null);
       setPin(null);
+      clearDraft(currentDraftKey);
+      setHistoryAnchor(null);
+      setAwayFromBottom(false);
       sendKey.current = null;
       pendingAttachment.current = null;
       setRevision((v) => v + 1);
@@ -338,6 +467,7 @@ export default function Chat() {
       )
         sendKey.current = null;
       setError(message(e));
+      rememberSend();
     } finally {
       setBusy(false);
     }
@@ -370,8 +500,10 @@ export default function Chat() {
     try {
       const value = await request<Msg>(`/chat/messages/${m.id}/`, method, data);
       setMessages((items) => items.map((x) => (x.id === value.id ? value : x)));
+      return true;
     } catch (e) {
       setError(message(e));
+      return false;
     }
   }
   async function react(m: Msg, emoji: string) {
@@ -405,40 +537,125 @@ export default function Chat() {
       setError(message(e));
     }
   }
+  function confirmAction(
+    title: string,
+    body: string,
+    action: string,
+    run: () => Promise<boolean>,
+  ) {
+    setConfirmation({ title, body, action, run });
+  }
+  async function submitReport(event: FormEvent) {
+    event.preventDefault();
+    if (!reporting || !reportReason.trim()) return;
+    if (
+      await act(`/chat/messages/${reporting.id}/report/`, "POST", {
+        reason: reportReason.trim(),
+      })
+    ) {
+      setReporting(null);
+      setReportReason("");
+      setNotice("Report sent for review.");
+    }
+  }
+  async function submitRename(event: FormEvent) {
+    event.preventDefault();
+    if (!renameText.trim()) return;
+    if (await act(base, "PATCH", { title: renameText.trim() }))
+      setRenaming(false);
+  }
   const allowed = !!conversation?.accepted && !conversation.blocked;
+  function jumpToMessage(target: number) {
+    setMediaOpen(false);
+    setManage(false);
+    setFilter("");
+    setSearchOpen(false);
+    const element = timeline.current?.querySelector(
+      `[data-message-id="${target}"]`,
+    );
+    if (element && !filter) element.scrollIntoView({ block: "center" });
+    else {
+      messagesRef.current = [];
+      scrollTarget.current = target;
+      setHistoryAnchor(target);
+      setRevision((v) => v + 1);
+    }
+    setAwayFromBottom(true);
+  }
+  function jumpLatest() {
+    setFilter("");
+    setSearchOpen(false);
+    setHistoryAnchor(null);
+    setUnreadTarget(null);
+    setAwayFromBottom(false);
+    messagesRef.current = [];
+    timeline.current?.scrollTo({ top: timeline.current.scrollHeight });
+    setRevision((v) => v + 1);
+  }
   const canSend = allowed && conversation.can_send;
   return (
-    <main className="chat-page">
-      <div className="chat-heading">
-        <div>
-          <span className="eyebrow">A LITTLE MORE CONNECTED</span>
-          <h1>Messages</h1>
-        </div>
-        <div className="chat-tools">
-          <span className="muted">
-            {live.connected ? "Live" : "Reconnecting…"}
-          </span>
-          <button
-            className="quiet-button"
-            onClick={() => {
-              setSettingsOpen(true);
-              void request<{ items: Author[] }>("/chat/blocks/")
-                .then((p) => setBlockedUsers(p.items))
-                .catch((e) => setError(message(e)));
-            }}
-          >
-            Privacy
-          </button>
-          <button className="primary-button" onClick={() => setNewChat(true)}>
-            New conversation
-          </button>
-        </div>
-      </div>
-      <ErrorNotice error={error} />
-      {notice && <p role="status">{notice}</p>}
-      <div className={`chat-layout ${id ? "chat-selected" : ""}`}>
-        <aside className="chat-inbox">
-          <div className="chat-folders">
+    <main className={`chat-page messenger ${id ? "has-conversation" : ""}`}>
+      <div className="chat-layout">
+        <aside className="chat-inbox" aria-label="Inbox">
+          <header className="inbox-heading">
+            <div>
+              <h1>Messages</h1>
+              <span
+                className={`connection-status ${live.connected ? "connected" : ""}`}
+              >
+                <i />
+                {live.connected ? "Live" : "Reconnecting…"}
+              </span>
+            </div>
+            <div className="inbox-actions">
+              <button
+                className="icon-button"
+                aria-label="Privacy"
+                title="Chat privacy"
+                onClick={() => {
+                  setSettingsOpen(true);
+                  void request<{ items: Author[] }>("/chat/blocks/")
+                    .then((p) => setBlockedUsers(p.items))
+                    .catch((e) => setError(message(e)));
+                }}
+              >
+                <Settings2 size={19} />
+              </button>
+              <button
+                className="icon-button compose-new"
+                aria-label="New conversation"
+                title="New conversation"
+                onClick={() => {
+                  setSelectedPeople([]);
+                  setInitialPerson("");
+                  setError("");
+                  setNewChat(true);
+                }}
+              >
+                <SquarePen size={20} />
+              </button>
+            </div>
+          </header>
+          <label className="messenger-search">
+            <Search size={17} />
+            <input
+              aria-label="Search conversations and people"
+              placeholder="Search chats or @username"
+              value={search}
+              maxLength={100}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+            {search && (
+              <button
+                type="button"
+                aria-label="Clear search"
+                onClick={() => setSearch("")}
+              >
+                <X size={15} />
+              </button>
+            )}
+          </label>
+          <div className="chat-folders" aria-label="Message folders">
             {["inbox", "requests", "archive"].map((f) => (
               <button
                 key={f}
@@ -446,118 +663,309 @@ export default function Chat() {
                 onClick={() => setFolder(f)}
               >
                 {f}
-                {f === "requests" && live.requests ? ` (${live.requests})` : ""}
+                {f === "requests" && live.requests > 0 && (
+                  <b>{live.requests}</b>
+                )}
               </button>
             ))}
           </div>
-          <input
-            aria-label="Search conversations"
-            placeholder="Search conversations"
-            value={search}
-            maxLength={100}
-            onChange={(e) => setSearch(e.target.value)}
-          />
-          {list.map((c) => (
-            <Link
-              className={`conversation-row ${String(c.id) === id ? "selected" : ""}`}
-              key={c.id}
-              to={`/messages/${c.id}${params.get("pin") ? `?pin=${params.get("pin")}` : ""}`}
-            >
-              <strong>{label(c)}</strong>
-              <span>
-                {c.last_message?.deleted
-                  ? "Message deleted"
-                  : c.last_message?.text ||
-                    (c.last_message ? "Shared an image or pin" : "Say hello")}
-              </span>
-              {c.unread > 0 && <b>{c.unread}</b>}
-            </Link>
-          ))}
-          {!list.length && <p className="muted">No conversations here yet.</p>}
-          {listCursor && (
-            <button
-              className="quiet-button"
-              onClick={async () => {
-                try {
-                  const p = await request<Page<Conversation>>(
-                    `/chat/conversations/?folder=${folder}&q=${encodeURIComponent(search)}&cursor=${encodeURIComponent(listCursor)}`,
-                  );
-                  setList((v) => [...v, ...p.items]);
-                  setListCursor(p.next_cursor);
-                } catch (e) {
-                  setError(message(e));
-                }
-              }}
-            >
-              More conversations
-            </button>
-          )}
+          <div className="inbox-scroll">
+            {!id && <ErrorNotice error={error} />}
+            {search && <h2 className="inbox-section-label">Conversations</h2>}
+            {list.map((c) => {
+              const peer = c.members.find((m) => m.id !== user?.id);
+              return (
+                <Link
+                  className={`conversation-row ${String(c.id) === id ? "selected" : ""} ${c.unread ? "unread" : ""}`}
+                  key={c.id}
+                  to={`/messages/${c.id}${params.get("pin") ? `?pin=${params.get("pin")}` : ""}`}
+                >
+                  <span className="conversation-avatar">
+                    {c.kind === "group" ? (
+                      <span className="group-avatar">
+                        <Users size={22} />
+                      </span>
+                    ) : peer ? (
+                      <Avatar author={peer} size="small" />
+                    ) : (
+                      <MessageCircle size={24} />
+                    )}
+                  </span>
+                  <span className="conversation-copy">
+                    <span className="conversation-top">
+                      <strong>{label(c)}</strong>
+                      {c.last_message && (
+                        <time dateTime={c.last_message.created_at}>
+                          {new Date(
+                            c.last_message.created_at,
+                          ).toLocaleDateString() ===
+                          new Date().toLocaleDateString()
+                            ? new Date(
+                                c.last_message.created_at,
+                              ).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })
+                            : new Date(
+                                c.last_message.created_at,
+                              ).toLocaleDateString([], {
+                                month: "short",
+                                day: "numeric",
+                              })}
+                        </time>
+                      )}
+                    </span>
+                    <span className="conversation-preview">
+                      <span>
+                        {c.last_message?.sender.id === user?.id &&
+                        !c.last_message?.deleted
+                          ? "You: "
+                          : ""}
+                        {c.last_message?.deleted
+                          ? "Message deleted"
+                          : c.last_message?.text ||
+                            (c.last_message?.attachment
+                              ? "Shared a photo"
+                              : c.last_message?.pin
+                                ? "Shared a pin"
+                                : "Start the conversation")}
+                      </span>
+                      {c.unread > 0 && <b>{c.unread}</b>}
+                    </span>
+                  </span>
+                </Link>
+              );
+            })}
+            {!list.length && (
+              <div className="inbox-empty">
+                {listLoading ? (
+                  <p role="status">Loading chats…</p>
+                ) : (
+                  <>
+                    <MessageCircle size={28} />
+                    <strong>
+                      {search
+                        ? "No matching chats"
+                        : folder === "requests"
+                          ? "You're all caught up"
+                          : folder === "archive"
+                            ? "No archived chats"
+                            : "Your inbox starts here"}
+                    </strong>
+                    <p>
+                      {search
+                        ? "Search people below to start a conversation."
+                        : folder === "requests"
+                          ? "New message requests will appear here."
+                          : folder === "archive"
+                            ? "Archived conversations will appear here."
+                            : "Find a friend and share something you love."}
+                    </p>
+                  </>
+                )}
+              </div>
+            )}
+            {listCursor && (
+              <button
+                className="quiet-button inbox-more"
+                onClick={async () => {
+                  try {
+                    const p = await request<Page<Conversation>>(
+                      `/chat/conversations/?folder=${folder}&q=${encodeURIComponent(search)}&cursor=${encodeURIComponent(listCursor)}`,
+                    );
+                    setList((v) => [...v, ...p.items]);
+                    setListCursor(p.next_cursor);
+                  } catch (e) {
+                    setError(message(e));
+                  }
+                }}
+              >
+                More conversations
+              </button>
+            )}
+            {search && (
+              <>
+                <h2 className="inbox-section-label">
+                  People · start a conversation
+                </h2>
+                <PeopleResults
+                  query={search}
+                  choose={(person) => void startDirect(person)}
+                />
+              </>
+            )}
+          </div>
+          <div className="inbox-footer">
+            <ShieldCheck size={14} />
+            <span>You decide who can message you.</span>
+          </div>
         </aside>
         <section className="chat-room" aria-label="Conversation">
+          <div className="chat-feedback">
+            <ErrorNotice error={error} />
+            {notice && (
+              <p role="status">
+                {notice}
+                <button
+                  className="icon-button"
+                  aria-label="Dismiss notification"
+                  onClick={() => setNotice("")}
+                >
+                  <X size={16} />
+                </button>
+              </p>
+            )}
+          </div>
           {!id ? (
             <div className="chat-empty">
-              <h2>A conversation starts with hello.</h2>
-              <p>
-                Choose a chat or start one with someone whose ideas you like.
-              </p>
+              <div className="chat-empty-icon">
+                <MessageCircle size={38} />
+                <span>
+                  <SquarePen size={18} />
+                </span>
+              </div>
+              <h2>Your ideas. Your people.</h2>
+              <p>Share a pin, say hello, or pick up where you left off.</p>
               {params.get("pin") && (
                 <p>Choose a conversation to share your pin.</p>
               )}
+              <button
+                className="primary-button"
+                onClick={() => {
+                  setSelectedPeople([]);
+                  setInitialPerson("");
+                  setNewChat(true);
+                }}
+              >
+                <SquarePen size={17} />
+                New conversation
+              </button>
+              <small>
+                New connections arrive as requests. You're in control.
+              </small>
             </div>
           ) : !conversation ? (
-            <p role="status">
-              {error
-                ? "This conversation is unavailable."
-                : "Loading conversation…"}
-            </p>
+            <div className="chat-empty" role="status">
+              <MessageCircle size={32} />
+              <h2>
+                {error ? "Conversation unavailable" : "Opening conversation…"}
+              </h2>
+              {error && (
+                <Link className="quiet-button" to="/messages">
+                  Back to inbox
+                </Link>
+              )}
+            </div>
           ) : (
             <>
               <header className="chat-room-header">
-                <Link className="mobile-chat-back" to="/messages">
-                  ← Inbox
+                <Link
+                  className="mobile-chat-back icon-button"
+                  to="/messages"
+                  aria-label="Back to inbox"
+                >
+                  <ArrowLeft size={22} />
                 </Link>
-                <div>
+                {conversation.kind === "group" ? (
+                  <span className="group-avatar">
+                    <Users size={22} />
+                  </span>
+                ) : (
+                  conversation.members.find((m) => m.id !== user?.id) && (
+                    <Avatar
+                      author={conversation.members.find(
+                        (m) => m.id !== user?.id,
+                      )!}
+                      size="small"
+                    />
+                  )
+                )}
+                <div className="room-heading">
                   <h2>{label(conversation)}</h2>
-                  <span className="muted">
-                    {conversation.members.length} people
-                    {online.length ? " · Someone is online" : ""}
+                  <span>
+                    {typing
+                      ? "Typing…"
+                      : conversation.kind === "group"
+                        ? `${conversation.members.length} members`
+                        : online.some((n) => n !== user?.id)
+                          ? "Online now"
+                          : `@${conversation.members.find((m) => m.id !== user?.id)?.username || ""}`}
                   </span>
                 </div>
                 <button
-                  className="quiet-button"
+                  className="icon-button"
+                  aria-label="Search this conversation"
+                  title="Search messages"
+                  aria-pressed={searchOpen}
+                  onClick={() => setSearchOpen((v) => !v)}
+                >
+                  <Search size={19} />
+                </button>
+                <button
+                  className="icon-button"
+                  aria-label="Details"
+                  title="Conversation details"
                   onClick={() => setManage(true)}
                 >
-                  Details
+                  <Info size={20} />
                 </button>
               </header>
-              <input
-                className="chat-search"
-                aria-label="Search messages"
-                placeholder="Search in this conversation"
-                value={filter}
-                maxLength={100}
-                onChange={(e) => setFilter(e.target.value)}
-              />
+              {!live.connected && (
+                <p className="chat-reconnecting" role="status">
+                  Reconnecting… Your conversation will update when the
+                  connection returns.
+                </p>
+              )}
+              {searchOpen && (
+                <label className="messenger-search conversation-search">
+                  <Search size={17} />
+                  <input
+                    autoFocus
+                    aria-label="Search messages"
+                    placeholder="Search in this conversation"
+                    value={filter}
+                    maxLength={100}
+                    onChange={(e) => setFilter(e.target.value)}
+                  />
+                  <button
+                    aria-label="Close message search"
+                    onClick={() => {
+                      setFilter("");
+                      setSearchOpen(false);
+                    }}
+                  >
+                    <X size={16} />
+                  </button>
+                </label>
+              )}
               {!conversation.accepted && (
                 <div className="chat-request">
-                  <p>
-                    {conversation.kind === "group"
-                      ? "You were invited to this group."
-                      : "Someone wants to start a conversation."}{" "}
-                    Accept to reply.
-                  </p>
-                  <button
-                    className="primary-button"
-                    onClick={() => void act(base, "PATCH", { accept: true })}
-                  >
-                    Accept conversation
-                  </button>
-                  <button
-                    className="quiet-button"
-                    onClick={() => void act(base, "PATCH", { leave: true })}
-                  >
-                    Decline
-                  </button>
+                  <div>
+                    <strong>
+                      {conversation.kind === "group"
+                        ? "You're invited"
+                        : "A new connection"}
+                    </strong>
+                    <p>
+                      {conversation.kind === "group"
+                        ? "Join this group to take part in the conversation."
+                        : "Accept this request to reply and share with each other."}
+                    </p>
+                  </div>
+                  <div>
+                    <button
+                      className="primary-button"
+                      onClick={() => void act(base, "PATCH", { accept: true })}
+                    >
+                      Accept conversation
+                    </button>
+                    <button
+                      className="quiet-button"
+                      onClick={() => void act(base, "PATCH", { leave: true })}
+                    >
+                      Decline
+                    </button>
+                  </div>
                 </div>
               )}
               {conversation.blocked && (
@@ -568,236 +976,216 @@ export default function Chat() {
               <div
                 className="chat-timeline"
                 ref={timeline}
+                onScroll={() => {
+                  const el = timeline.current;
+                  if (el)
+                    setAwayFromBottom(
+                      el.scrollHeight - el.scrollTop - el.clientHeight > 120,
+                    );
+                }}
                 role="log"
                 aria-label="Messages"
                 aria-live="polite"
               >
                 {cursor && (
                   <button
-                    className="quiet-button"
+                    className="quiet-button older-messages"
                     disabled={busy}
                     onClick={() => void more()}
                   >
                     Load older messages
                   </button>
                 )}
-                {messages.map((m) => (
-                  <article
-                    key={m.id}
-                    className={`chat-message ${m.sender.id === user?.id ? "own" : ""}`}
-                  >
-                    <div className="chat-message-author">
-                      <Avatar author={m.sender} size="small" />
-                      <Link to={`/u/${m.sender.username}`}>
-                        {m.sender.display_name || m.sender.username}
-                      </Link>
-                      <time dateTime={m.created_at}>
-                        {new Date(m.created_at).toLocaleString([], {
-                          month: "short",
-                          day: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </time>
-                    </div>
-                    <div className="message-bubble">
-                      {m.reply && (
-                        <blockquote>
-                          {m.reply.text || "Shared image or pin"}
-                        </blockquote>
-                      )}
-                      {m.deleted ? (
-                        <em>Message deleted</em>
-                      ) : (
-                        <>
-                          <p>{m.text}</p>
-                          {m.pin && (
-                            <Link
-                              className="chat-pin"
-                              to={`/posts/${m.pin.id}`}
-                            >
-                              <img src={m.pin.thumbnail} alt="" />
-                              <strong>{m.pin.title}</strong>
-                            </Link>
-                          )}
-                          {m.attachment && (
-                            <a
-                              href={m.attachment.url}
-                              target="_blank"
-                              rel="noreferrer"
-                            >
-                              <img
-                                className="chat-image"
-                                src={m.attachment.url}
-                                alt="Shared chat image"
-                                loading="lazy"
-                              />
-                            </a>
-                          )}
-                          {m.edited_at && (
-                            <small className="muted">Edited</small>
-                          )}
-                        </>
-                      )}
-                    </div>
-                    {!m.deleted && (
-                      <div className="chat-message-actions">
-                        {allowed && (
-                          <>
-                            <button onClick={() => setReply(m)}>Reply</button>
-                            <details>
-                              <summary>React</summary>
-                              <div>
-                                {emojis.map((emoji) => (
-                                  <button
-                                    key={emoji}
-                                    aria-label={`React ${emoji}`}
-                                    aria-pressed={m.reactions.some(
-                                      (r) =>
-                                        r.emoji === emoji &&
-                                        r.user_id === user?.id,
-                                    )}
-                                    onClick={() => void react(m, emoji)}
-                                  >
-                                    {emoji}
-                                  </button>
-                                ))}
-                              </div>
-                            </details>
-                          </>
-                        )}
-                        {m.sender.id === user?.id ? (
-                          <>
-                            {allowed && (
-                              <button
-                                onClick={() => {
-                                  const value = window.prompt(
-                                    "Edit message",
-                                    m.text,
-                                  );
-                                  if (value !== null)
-                                    void updateMessage(m, "PATCH", {
-                                      text: value,
-                                    });
-                                }}
-                              >
-                                Edit
-                              </button>
-                            )}
-                            <button
-                              onClick={() => {
-                                if (
-                                  window.confirm(
-                                    "Delete this message for everyone?",
-                                  )
-                                )
-                                  void updateMessage(m, "DELETE");
-                              }}
-                            >
-                              Delete
-                            </button>
-                          </>
-                        ) : (
-                          <button
-                            onClick={async () => {
-                              const reason = window.prompt(
-                                "Why are you reporting this message?",
-                              );
-                              if (
-                                reason &&
-                                (await act(
-                                  `/chat/messages/${m.id}/report/`,
-                                  "POST",
-                                  { reason },
-                                ))
-                              )
-                                setNotice("Report sent for review.");
-                            }}
-                          >
-                            Report
-                          </button>
-                        )}
-                      </div>
-                    )}
-                    {m.reactions.length > 0 && (
-                      <div aria-label="Reactions">
-                        {emojis
-                          .filter((e) => m.reactions.some((r) => r.emoji === e))
-                          .map((e) => (
-                            <span key={e}>
-                              {e}{" "}
-                              {
-                                m.reactions.filter((r) => r.emoji === e).length
-                              }{" "}
-                            </span>
-                          ))}
-                      </div>
-                    )}
-                    {m.sender.id === user?.id && !m.deleted && (
-                      <small className="muted">
-                        {conversation.members.some(
+                {messages.map((m, index) => {
+                  const previous = messages[index - 1],
+                    next = messages[index + 1];
+                  const sameDay =
+                    previous &&
+                    new Date(previous.created_at).toDateString() ===
+                      new Date(m.created_at).toDateString();
+                  const grouped =
+                    !!sameDay &&
+                    previous.sender.id === m.sender.id &&
+                    new Date(m.created_at).getTime() -
+                      new Date(previous.created_at).getTime() <
+                      300000;
+                  const last =
+                    !next ||
+                    next.sender.id !== m.sender.id ||
+                    new Date(next.created_at).getTime() -
+                      new Date(m.created_at).getTime() >=
+                      300000;
+                  const status = conversation.members.some(
+                    (peer) =>
+                      peer.id !== user?.id && (peer.last_read_id || 0) >= m.id,
+                  )
+                    ? "Read"
+                    : conversation.members.some(
                           (peer) =>
-                            peer.id !== user.id &&
-                            (peer.last_read_id || 0) >= m.id,
+                            peer.id !== user?.id &&
+                            peer.last_delivered_id >= m.id,
                         )
-                          ? "Read"
-                          : conversation.members.some(
-                                (peer) =>
-                                  peer.id !== user.id &&
-                                  peer.last_delivered_id >= m.id,
-                              )
-                            ? "Delivered"
-                            : "Sent"}
-                      </small>
-                    )}
-                  </article>
-                ))}
+                      ? "Delivered"
+                      : "Sent";
+                  return (
+                    <div key={m.id} data-message-id={m.id}>
+                      {m.id === unreadTarget && (
+                        <div className="unread-divider">Unread messages</div>
+                      )}
+                      {!sameDay && (
+                        <div className="chat-date">
+                          <span>
+                            {new Date(m.created_at).toDateString() ===
+                            new Date().toDateString()
+                              ? "Today"
+                              : new Date(m.created_at).toLocaleDateString([], {
+                                  weekday: "short",
+                                  month: "short",
+                                  day: "numeric",
+                                })}
+                          </span>
+                        </div>
+                      )}
+                      <ChatMessage
+                        value={m}
+                        own={m.sender.id === user?.id}
+                        grouped={grouped}
+                        last={last}
+                        allowed={allowed}
+                        userId={user?.id}
+                        status={status}
+                        reply={() => {
+                          setReply(m);
+                          writeDraft(currentDraftKey, { text, reply: m, pin });
+                          composer.current?.focus();
+                        }}
+                        edit={() => {
+                          setEditing(m);
+                          setEditText(m.text);
+                        }}
+                        remove={() =>
+                          confirmAction(
+                            "Delete this message?",
+                            "This message will be removed for everyone in the conversation.",
+                            "Delete message",
+                            () => updateMessage(m, "DELETE"),
+                          )
+                        }
+                        report={() => {
+                          setReporting(m);
+                          setReportReason("");
+                        }}
+                        react={(emoji) => void react(m, emoji)}
+                      />
+                    </div>
+                  );
+                })}
                 {!messages.length && (
-                  <p className="muted">
-                    {filter
-                      ? "No messages match that search."
-                      : "Say hello. Make a connection."}
-                  </p>
+                  <div className="timeline-empty">
+                    <MessageCircle size={28} />
+                    <strong>
+                      {filter
+                        ? "No matching messages"
+                        : "Say hello to " + label(conversation)}
+                    </strong>
+                    <p>
+                      {filter
+                        ? "Try a different word or clear your search."
+                        : "A little conversation can lead to a big idea."}
+                    </p>
+                  </div>
                 )}
               </div>
-              <p className="chat-typing" role="status">
-                {typing ? "Someone is typing…" : ""}
-              </p>
+              <div className="chat-jump-controls">
+                {unreadTarget && (
+                  <button
+                    className="quiet-button"
+                    onClick={() => jumpToMessage(unreadTarget)}
+                  >
+                    Jump to unread
+                  </button>
+                )}
+                {(awayFromBottom || historyAnchor || filter) && (
+                  <button className="secondary-button" onClick={jumpLatest}>
+                    <ArrowDown size={15} />
+                    Jump to latest
+                  </button>
+                )}
+              </div>
               <form className="chat-composer" onSubmit={send}>
+                {pendingAttachment.current && !image && sendKey.current && (
+                  <p className="composer-status">
+                    Your uploaded photo is ready to retry.
+                  </p>
+                )}
                 {allowed && !canSend && !sendKey.current && (
-                  <p className="muted">
-                    Waiting for the other person to accept your message request.
+                  <p className="composer-status">
+                    Your request is sent. You can reply once it's accepted.
+                  </p>
+                )}
+                {typing && (
+                  <p className="composer-status" role="status">
+                    Someone is typing…
                   </p>
                 )}
                 {reply && (
                   <div className="chat-compose-preview">
-                    Replying to: {reply.text.slice(0, 100)}{" "}
+                    <span>
+                      <strong>
+                        Replying to{" "}
+                        {reply.sender.display_name || reply.sender.username}
+                      </strong>
+                      <small>
+                        {reply.text.slice(0, 100) || "Shared image or pin"}
+                      </small>
+                    </span>
                     <button
+                      className="icon-button"
                       type="button"
+                      aria-label="Remove reply"
                       disabled={busy || !!sendKey.current}
-                      onClick={() => setReply(null)}
+                      onClick={() => {
+                        setReply(null);
+                        writeDraft(currentDraftKey, { text, reply: null, pin });
+                      }}
                     >
-                      Remove reply
+                      <X size={17} />
                     </button>
                   </div>
                 )}
                 {pin && (
                   <div className="chat-compose-preview">
-                    Sharing pin #{pin}{" "}
+                    <span>
+                      <strong>Pin ready to share</strong>
+                      <small>Send it with a message, or on its own.</small>
+                    </span>
                     <button
+                      className="icon-button"
                       type="button"
+                      aria-label="Remove pin"
                       disabled={busy || !!sendKey.current}
-                      onClick={() => setPin(null)}
+                      onClick={() => {
+                        setPin(null);
+                        writeDraft(currentDraftKey, { text, reply, pin: null });
+                      }}
                     >
-                      Remove pin
+                      <X size={17} />
                     </button>
                   </div>
                 )}
                 {image && (
                   <div className="chat-compose-preview">
-                    {image.name}{" "}
+                    {imagePreview && (
+                      <img src={imagePreview} alt="Attachment preview" />
+                    )}
+                    <span>
+                      <strong>Photo attached</strong>
+                      <small>{image.name}</small>
+                    </span>
                     <button
+                      className="icon-button"
                       type="button"
+                      aria-label="Remove image"
                       disabled={busy || !!sendKey.current}
                       onClick={() => {
                         setImage(null);
@@ -805,29 +1193,13 @@ export default function Chat() {
                         sendKey.current = null;
                       }}
                     >
-                      Remove image
+                      <X size={17} />
                     </button>
                   </div>
                 )}
-                <textarea
-                  aria-label="Message"
-                  placeholder="Write a message…"
-                  maxLength={4000}
-                  value={text}
-                  disabled={!canSend || busy || !!sendKey.current}
-                  onChange={(e) => {
-                    setText(e.target.value);
-                    if (!sendKey.current)
-                      live.send({
-                        type: "typing",
-                        conversation_id: Number(id),
-                        active: true,
-                      });
-                  }}
-                />
-                <div>
-                  <label className="quiet-button">
-                    Attach image
+                <div className="composer-input-row">
+                  <label className="composer-attach" title="Attach image">
+                    <ImagePlus size={21} />
                     <input
                       aria-label="Attach image"
                       type="file"
@@ -841,21 +1213,74 @@ export default function Chat() {
                       }}
                     />
                   </label>
-                  <span className="muted">{text.length}/4000</span>
+                  <textarea
+                    ref={composer}
+                    rows={1}
+                    aria-label="Message"
+                    placeholder={
+                      canSend
+                        ? "Write a message…"
+                        : "Reply when this conversation is accepted"
+                    }
+                    maxLength={4000}
+                    value={text}
+                    disabled={!canSend || busy || !!sendKey.current}
+                    onKeyDown={(e) => {
+                      if (
+                        e.key === "Enter" &&
+                        !e.shiftKey &&
+                        !e.nativeEvent.isComposing &&
+                        (text.trim() || image || pin)
+                      ) {
+                        e.preventDefault();
+                        e.currentTarget.form?.requestSubmit();
+                      }
+                    }}
+                    onChange={(e) => {
+                      setText(e.target.value);
+                      writeDraft(currentDraftKey, {
+                        text: e.target.value,
+                        reply,
+                        pin,
+                      });
+                      if (!sendKey.current)
+                        live.send({
+                          type: "typing",
+                          conversation_id: Number(id),
+                          active: true,
+                        });
+                    }}
+                  />
                   <button
-                    className="primary-button"
+                    className="composer-send"
+                    aria-label={
+                      busy
+                        ? "Sending…"
+                        : sendKey.current
+                          ? "Retry send"
+                          : "Send message"
+                    }
+                    title={sendKey.current ? "Retry send" : "Send message"}
                     disabled={
                       (!canSend && !sendKey.current) ||
                       busy ||
-                      (!text.trim() && !image && !pin)
+                      (!text.trim() &&
+                        !image &&
+                        !pin &&
+                        !pendingAttachment.current)
                     }
                   >
-                    {busy
-                      ? "Sending…"
-                      : sendKey.current
-                        ? "Retry send"
-                        : "Send message"}
+                    <Send size={19} />
+                    {sendKey.current && <span>Retry</span>}
                   </button>
+                </div>
+                <div className="composer-hint">
+                  <span>Enter to send · Shift + Enter for a new line</span>
+                  <span>
+                    {text.length > 3500
+                      ? `${text.length}/4000`
+                      : "Photos & pins welcome"}
+                  </span>
                 </div>
               </form>
             </>
@@ -863,42 +1288,54 @@ export default function Chat() {
         </section>
       </div>
       {newChat && (
-        <Modal title="New conversation" close={() => setNewChat(false)}>
-          <form className="form-stack" onSubmit={create}>
-            <label>
+        <Modal
+          title="New conversation"
+          busy={busy}
+          close={() => {
+            if (!busy) setNewChat(false);
+          }}
+        >
+          <form className="form-stack new-chat-form" onSubmit={create}>
+            <label className="checkbox-field">
               <input
                 type="checkbox"
                 checked={group}
-                onChange={(e) => setGroup(e.target.checked)}
-              />{" "}
-              Group conversation
+                onChange={(e) => {
+                  setGroup(e.target.checked);
+                  setSelectedPeople([]);
+                }}
+              />
+              <span>Group conversation</span>
             </label>
             {group && (
-              <label>
+              <label className="field">
                 Group name
                 <input
                   value={title}
                   maxLength={100}
                   required
                   onChange={(e) => setTitle(e.target.value)}
+                  placeholder="Give your group a name"
                 />
               </label>
             )}
-            <label>
-              {group ? "Usernames, separated by commas" : "Username"}
-              <input
-                value={names}
-                maxLength={group ? 1500 : 150}
-                required
-                onChange={(e) => setNames(e.target.value)}
-              />
-            </label>
+            <PeoplePicker
+              selected={selectedPeople}
+              change={setSelectedPeople}
+              multiple={group}
+              initialQuery={initialPerson}
+            />
             <p className="muted">
-              New conversations may arrive as a request. Groups have up to 20
-              people.
+              New connections may arrive as a request. Groups can include up to
+              20 people.
             </p>
             <ErrorNotice error={error} />
-            <button className="primary-button" disabled={busy}>
+            <button
+              className="primary-button"
+              disabled={
+                busy || !selectedPeople.length || selectedPeople.length > 19
+              }
+            >
               {busy ? "Starting…" : "Start conversation"}
             </button>
           </form>
@@ -971,10 +1408,25 @@ export default function Chat() {
           </div>
         </Modal>
       )}
+      {mediaOpen && id && (
+        <Modal title="Shared photos & pins" close={() => setMediaOpen(false)}>
+          <SharedMedia conversation={id} jump={jumpToMessage} />
+        </Modal>
+      )}
       {manage && conversation && (
         <Modal title="Conversation details" close={() => setManage(false)}>
           <div className="form-stack">
             <ErrorNotice error={error} />
+            <button
+              className="secondary-button"
+              onClick={() => {
+                setManage(false);
+                setMediaOpen(true);
+              }}
+            >
+              <ImagePlus size={17} />
+              Shared photos & pins
+            </button>
             <button
               className="quiet-button"
               onClick={() =>
@@ -1001,7 +1453,9 @@ export default function Chat() {
                   if (peer)
                     void act("/chat/blocks/", "POST", {
                       username: peer.username,
-                    }).then(() => setManage(false));
+                    }).then((ok) => {
+                      if (ok) setManage(false);
+                    });
                 }}
               >
                 Block person
@@ -1012,11 +1466,9 @@ export default function Chat() {
                 <button
                   className="quiet-button"
                   onClick={() => {
-                    const value = window.prompt(
-                      "Group name",
-                      conversation.title,
-                    );
-                    if (value) void act(base, "PATCH", { title: value });
+                    setRenameText(conversation.title);
+                    setManage(false);
+                    setRenaming(true);
                   }}
                 >
                   Rename group
@@ -1025,26 +1477,30 @@ export default function Chat() {
                   onSubmit={(e) => {
                     e.preventDefault();
                     void act(`${base}members/`, "POST", {
-                      username: invite,
+                      username: invitePeople[0]?.username || "",
                     }).then((ok) => {
-                      if (ok) setInvite("");
+                      if (ok) setInvitePeople([]);
                     });
                   }}
                 >
-                  <label>
-                    Invite username
-                    <input
-                      value={invite}
-                      required
-                      onChange={(e) => setInvite(e.target.value)}
-                    />
-                  </label>
-                  <button className="primary-button">Invite</button>
+                  <h3 className="inbox-section-label">Invite someone</h3>
+                  <PeoplePicker
+                    selected={invitePeople}
+                    change={setInvitePeople}
+                    multiple={false}
+                  />
+                  <button
+                    className="primary-button"
+                    disabled={!invitePeople.length}
+                  >
+                    Invite
+                  </button>
                 </form>
               </>
             )}
             {conversation.members.map((m) => (
               <div className="chat-member" key={m.id}>
+                <Avatar author={m} size="small" />
                 <span>
                   {m.display_name || m.username} ·{" "}
                   {m.accepted ? m.role : "invited"}
@@ -1066,11 +1522,18 @@ export default function Chat() {
                       )}
                       {m.id !== user?.id && (
                         <button
-                          onClick={() =>
-                            void act(`${base}members/`, "DELETE", {
-                              username: m.username,
-                            })
-                          }
+                          onClick={() => {
+                            setManage(false);
+                            confirmAction(
+                              "Remove this member?",
+                              `${m.display_name || m.username} will lose access to this conversation.`,
+                              "Remove member",
+                              () =>
+                                act(`${base}members/`, "DELETE", {
+                                  username: m.username,
+                                }),
+                            );
+                          }}
                         >
                           Remove
                         </button>
@@ -1082,16 +1545,163 @@ export default function Chat() {
             <button
               className="quiet-button"
               onClick={() => {
-                if (
-                  window.confirm(
-                    "Leave this conversation? You will lose access to its history.",
-                  )
-                )
-                  void act(base, "PATCH", { leave: true });
+                setManage(false);
+                confirmAction(
+                  "Leave this conversation?",
+                  "You will lose access to its history unless someone invites you again.",
+                  "Leave conversation",
+                  () => act(base, "PATCH", { leave: true }),
+                );
               }}
             >
               Leave conversation
             </button>
+          </div>
+        </Modal>
+      )}
+      {editing && (
+        <Modal
+          title="Edit message"
+          busy={dialogBusy}
+          close={() => setEditing(null)}
+        >
+          <form
+            className="form-stack chat-dialog-form"
+            onSubmit={async (event) => {
+              event.preventDefault();
+              if (!editText.trim()) return;
+              setDialogBusy(true);
+              const ok = await updateMessage(editing, "PATCH", {
+                text: editText.trim(),
+              });
+              if (ok) setEditing(null);
+              setDialogBusy(false);
+            }}
+          >
+            <label>
+              Message
+              <textarea
+                autoFocus
+                value={editText}
+                aria-label="Message"
+                maxLength={4000}
+                onChange={(event) => setEditText(event.target.value)}
+              />
+            </label>
+            <ErrorNotice error={error} />
+            <div className="dialog-actions">
+              <button
+                type="button"
+                className="quiet-button"
+                onClick={() => setEditing(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="primary-button"
+                disabled={dialogBusy || !editText.trim()}
+              >
+                Save edit
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+      {reporting && (
+        <Modal title="Report message" close={() => setReporting(null)}>
+          <form className="form-stack chat-dialog-form" onSubmit={submitReport}>
+            <p className="muted">
+              Tell us what is wrong. The message will stay visible while it is
+              reviewed.
+            </p>
+            <label>
+              Reason
+              <textarea
+                autoFocus
+                required
+                maxLength={1000}
+                value={reportReason}
+                placeholder="Describe the problem…"
+                onChange={(event) => setReportReason(event.target.value)}
+              />
+            </label>
+            <div className="dialog-actions">
+              <button
+                type="button"
+                className="quiet-button"
+                onClick={() => setReporting(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="primary-button"
+                disabled={!reportReason.trim()}
+              >
+                Send report
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+      {renaming && (
+        <Modal title="Rename group" close={() => setRenaming(false)}>
+          <form className="form-stack chat-dialog-form" onSubmit={submitRename}>
+            <label>
+              Group name
+              <input
+                autoFocus
+                required
+                maxLength={100}
+                value={renameText}
+                onChange={(event) => setRenameText(event.target.value)}
+              />
+            </label>
+            <div className="dialog-actions">
+              <button
+                type="button"
+                className="quiet-button"
+                onClick={() => setRenaming(false)}
+              >
+                Cancel
+              </button>
+              <button className="primary-button" disabled={!renameText.trim()}>
+                Save name
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+      {confirmation && (
+        <Modal
+          title={confirmation.title}
+          busy={dialogBusy}
+          close={() => {
+            if (!dialogBusy) setConfirmation(null);
+          }}
+        >
+          <div className="chat-dialog-form form-stack">
+            <p className="muted">{confirmation.body}</p>
+            <ErrorNotice error={error} />
+            <div className="dialog-actions">
+              <button
+                className="quiet-button"
+                disabled={dialogBusy}
+                onClick={() => setConfirmation(null)}
+              >
+                Cancel
+              </button>
+              <button
+                className="danger-button"
+                disabled={dialogBusy}
+                onClick={async () => {
+                  setDialogBusy(true);
+                  if (await confirmation.run()) setConfirmation(null);
+                  setDialogBusy(false);
+                }}
+              >
+                {confirmation.action}
+              </button>
+            </div>
           </div>
         </Modal>
       )}

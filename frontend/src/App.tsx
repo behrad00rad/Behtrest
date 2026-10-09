@@ -7,10 +7,13 @@ import {
   Search as SearchIcon,
   Plus,
   Bookmark,
+  House,
   MessageCircle,
+  UserRound,
 } from "lucide-react";
 import {
   Link,
+  NavLink,
   Navigate,
   Route,
   Routes,
@@ -81,7 +84,7 @@ function Header() {
           </Link>
           {auth.user ? (
             <>
-              <Link
+              <NavLink
                 className="quiet-button"
                 to="/messages"
                 aria-label="Messages"
@@ -91,15 +94,15 @@ function Header() {
                 {chat.unread + chat.requests > 0 && (
                   <b className="chat-badge">{chat.unread + chat.requests}</b>
                 )}
-              </Link>
-              <Link
+              </NavLink>
+              <NavLink
                 className="quiet-button"
                 to="/boards"
                 aria-label="Your boards"
               >
                 <Bookmark size={17} />
                 <span className="nav-label">Boards</span>
-              </Link>
+              </NavLink>
               <Link className="nav-create" to="/create" aria-label="Create pin">
                 <Plus size={18} />
                 <span className="nav-label">Create</span>
@@ -129,7 +132,60 @@ function Header() {
             </Link>
           )}
         </nav>
+        {auth.user && (
+          <details className="mobile-account-menu">
+            <summary aria-label="Account menu">
+              <Avatar
+                author={{
+                  username: auth.user.username,
+                  display_name: auth.user.profile.display_name,
+                  avatar: auth.user.profile.avatar,
+                }}
+                size="small"
+              />
+            </summary>
+            <div>
+              <Link to={`/u/${auth.user.username}`}>Your profile</Link>
+              <Link to="/story">Our story</Link>
+              <button disabled={busy} onClick={() => void signOut()}>
+                <LogOut size={15} />
+                {busy ? "Signing out…" : "Sign out"}
+              </button>
+            </div>
+          </details>
+        )}
       </header>
+      {auth.user && (
+        <nav className="mobile-nav" aria-label="Mobile navigation">
+          <NavLink to="/" end aria-label="Home">
+            <House size={19} />
+            <span>Home</span>
+          </NavLink>
+          <NavLink to="/messages" aria-label="Messages">
+            <span className="mobile-nav-icon">
+              <MessageCircle size={19} />
+              {chat.unread + chat.requests > 0 && (
+                <b className="chat-badge">{chat.unread + chat.requests}</b>
+              )}
+            </span>
+            <span>Messages</span>
+          </NavLink>
+          <NavLink to="/create" aria-label="Create pin">
+            <span className="mobile-nav-create">
+              <Plus size={19} />
+            </span>
+            <span>Create</span>
+          </NavLink>
+          <NavLink to="/boards" aria-label="Your boards">
+            <Bookmark size={19} />
+            <span>Boards</span>
+          </NavLink>
+          <NavLink to={`/u/${auth.user.username}`} aria-label="Your profile">
+            <UserRound size={19} />
+            <span>Profile</span>
+          </NavLink>
+        </nav>
+      )}
       {error && (
         <p className="global-error" role="alert">
           {error}
@@ -205,7 +261,13 @@ export default function App() {
         Skip to content
       </a>
       <Header />
-      <div id="main-content" tabIndex={-1}>
+      <div
+        id="main-content"
+        className={
+          location.pathname.startsWith("/messages") ? "messaging-content" : ""
+        }
+        tabIndex={-1}
+      >
         {auth.loading ? (
           <div className="loading-page" role="status">
             <span className="loading-dot" />
@@ -327,7 +389,9 @@ export default function App() {
           </Routes>
         )}
       </div>
-      <footer className="site-footer">
+      <footer
+        className={`site-footer ${location.pathname.startsWith("/messages") ? "messaging-footer" : ""}`}
+      >
         <span>A little space for big ideas.</span>
         <span>Originally made at 13. Still curious.</span>
       </footer>

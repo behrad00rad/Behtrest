@@ -49,6 +49,41 @@ class ChatTests(TestCase):
         for path in [f"/conversations/{self.pk}/", f"/conversations/{self.pk}/messages/", f"/messages/{m['id']}/"]: self.api(path, status=404)
         self.api(f"/conversations/{self.pk}/messages/", "post", {"text": "no", "client_id": str(uuid.uuid4())}, 404)
 
+    def test_unread_anchor_and_history_seek_are_scoped(self):
+        self.accept()
+        first = self.send("first unread")
+        self.send("later")
+        self.client.force_login(self.bob)
+        conversation = self.api(f"/conversations/{self.pk}/")
+        self.assertEqual(conversation["first_unread_id"], first["id"])
+        window = self.api(f"/conversations/{self.pk}/messages/?around={first['id']}")
+        self.assertEqual([item["id"] for item in window["items"]], [first["id"]])
+        self.api(f"/conversations/{self.pk}/messages/?around=invalid", status=400)
+        self.api(f"/conversations/{self.pk}/messages/?around={first['id']}&q=first", status=400)
+        self.client.force_login(self.outsider)
+        self.api(f"/conversations/{self.pk}/messages/?around={first['id']}", status=404)
+        self.api(f"/conversations/{self.pk}/media/", status=404)
+
+    def test_shared_photos_follow_join_boundary_and_deletion(self):
+        group = self.api("/conversations/", "post", {"usernames": "bob", "title": "Photos"}, 201)
+        self.pk = group["id"]
+        with tempfile.TemporaryDirectory() as root, override_settings(PRIVATE_MEDIA_ROOT=root):
+            stream = BytesIO(); Image.new("RGB", (12, 16), "blue").save(stream, format="PNG")
+            response = self.client.post(f"/api/chat/conversations/{self.pk}/attachments/", {"image": SimpleUploadedFile("blue.png", stream.getvalue(), "image/png")})
+            self.assertEqual(response.status_code, 201)
+            old = self.send("photo", attachment_id=response.json()["data"]["id"])
+            self.assertEqual(len(self.api(f"/conversations/{self.pk}/media/?kind=photos")["items"]), 1)
+            self.assertEqual(self.api(f"/conversations/{self.pk}/media/?kind=pins")["items"], [])
+            self.api(f"/conversations/{self.pk}/media/?kind=invalid", status=400)
+            self.api(f"/conversations/{self.pk}/members/", "post", {"username": "outsider"})
+            self.client.force_login(self.outsider)
+            self.api(f"/conversations/{self.pk}/", "patch", {"accept": True})
+            self.assertEqual(self.api(f"/conversations/{self.pk}/media/")["items"], [])
+            self.api(f"/conversations/{self.pk}/messages/?around={old['id']}", status=404)
+            self.client.force_login(self.alice)
+            with self.captureOnCommitCallbacks(execute=True): self.api(f"/messages/{old['id']}/", "delete")
+            self.assertEqual(self.api(f"/conversations/{self.pk}/media/")["items"], [])
+
     def test_replies_reactions_edits_and_tombstone(self):
         self.accept(); m = self.send(); reply = self.send("reply", reply_id=m["id"])
         self.assertEqual(reply["reply"]["text"], "hello")

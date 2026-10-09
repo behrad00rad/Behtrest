@@ -1,6 +1,6 @@
 # Bintrest V2 task plan
 
-Status: tasks 1–8 approved and completed on October 9, 2026. Tasks 9–11 remain pending. See docs/VERIFICATION.md for evidence.
+Status: tasks 1–9 completed on October 9, 2026. Task 11's deployment candidate is prepared; container runtime verification remains pending. Task 10 remains deferred. Tasks 9 and 11 were explicitly approved. See docs/VERIFICATION.md for evidence.
 
 ## Preparation completed
 
@@ -88,11 +88,11 @@ Preserve `btrest/` as V1. Build V2 in new `backend/` and `frontend/` directories
 
 ## 9. Polish and verify
 
-- [ ] Review mobile layouts, keyboard access, labels, focus, contrast, and alternative text.
-- [ ] Replace placeholders with working controls and consistent feedback.
-- [ ] Add meaningful backend tests for auth, ownership, private boards, uploads, and pagination.
-- [ ] Add an end-to-end registration → upload → comment → save → profile → logout test.
-- [ ] Add CI for tests, frontend builds, and appropriate static checks.
+- [x] Review mobile layouts, keyboard access, labels, focus, contrast, and alternative text.
+- [x] Replace placeholders with working controls and consistent feedback.
+- [x] Add meaningful backend tests for auth, ownership, private boards, uploads, and pagination.
+- [x] Add an end-to-end registration → upload → comment → save → profile → logout test.
+- [x] Add CI for tests, frontend builds, and appropriate static checks.
 
 **Done when:** the main journey passes automated checks and desktop/mobile visual review. Tests never mutate the legacy database.
 
@@ -107,11 +107,12 @@ Preserve `btrest/` as V1. Build V2 in new `backend/` and `frontend/` directories
 
 ## 11. Prepare deployment and documentation
 
-- [ ] Document HTTPS, secure cookies, allowed hosts, environment settings, static/media handling, and email delivery.
-- [ ] Choose hosting, production database, and media storage for the actual target.
-- [ ] Document backups, restore checks, logging, and health checks.
-- [ ] Update the README with verified setup, screenshots, architecture, and the V1-to-V2 story.
-- [ ] Run final checks and prepare a release for review.
+- [x] Document HTTPS, secure cookies, allowed hosts, environment settings, static/media handling, and email delivery.
+- [x] Choose hosting, production database, and media storage for the actual target: a portable single Linux Docker host, SQLite, and persistent filesystem media, as selected by the user.
+- [x] Document backups, restore checks, logging, and health checks.
+- [x] Update the README with verified setup, screenshots, architecture, and the V1-to-V2 story.
+- [x] Run available local checks and prepare a release candidate for review.
+- [ ] Run container builds and HTTPS smoke verification on an available Docker engine (CI job supplied; local engine unavailable). Confirm before publishing.
 
 **Done when:** deployment instructions are concrete, checks pass, and recovery is documented. Publishing requires a deployment request.
 
@@ -127,4 +128,4 @@ Preserve `btrest/` as V1. Build V2 in new `backend/` and `frontend/` directories
 
 ## Review checkpoint
 
-The user approved tasks 1–8. Those tasks are complete; stop before task 9 until further authorization. The original completion year remains unconfirmed; do not turn the 2022 course-folder reference into a claimed completion date.
+The user approved tasks 1–9 and 11. Task 9 is complete; task 11 is prepared with container runtime verification still pending. Task 10 is deferred. No public deployment is authorized. The original completion year remains unconfirmed; do not turn the 2022 course-folder reference into a claimed completion date.

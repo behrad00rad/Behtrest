@@ -77,7 +77,11 @@ function Header() {
           </Link>
           {auth.user ? (
             <>
-              <Link className="quiet-button" to="/boards">
+              <Link
+                className="quiet-button"
+                to="/boards"
+                aria-label="Your boards"
+              >
                 <Bookmark size={17} />
                 <span className="nav-label">Boards</span>
               </Link>
@@ -178,6 +182,7 @@ export default function App() {
   const location = useLocation();
   useEffect(() => {
     window.scrollTo(0, 0);
+    document.getElementById("main-content")?.focus({ preventScroll: true });
   }, [location.pathname]);
   return (
     <>

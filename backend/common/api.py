@@ -6,6 +6,7 @@ from functools import wraps
 from django.conf import settings
 from django.core.exceptions import ValidationError, RequestDataTooBig, TooManyFieldsSent, TooManyFilesSent
 from django.db import IntegrityError
+from django.db import connection, DatabaseError
 from django.db.models import F
 from django.http import Http404, JsonResponse
 from django.utils import timezone
@@ -119,6 +120,17 @@ def endpoint(methods, *, authenticated=False, rate=None, account_field=None, mul
 @endpoint(["GET"])
 def health(request):
     return success({"status": "ok", "service": "bintrest"})
+
+
+@endpoint(["GET"])
+def ready(request):
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1 FROM django_migrations LIMIT 1")
+            cursor.fetchone()
+    except DatabaseError:
+        return failure("not_ready", "The service is not ready.", 503)
+    return success({"status": "ready", "service": "bintrest"})
 
 
 def csrf_failure(request, reason=""):

@@ -15,6 +15,7 @@ User data: `id`, `username`, `email`, and `profile` with `display_name` and `bio
 | Method | Path | Fields | Result |
 | --- | --- | --- | --- |
 | GET | `health/` | — | Service status |
+| GET | `ready/` | — | Database readiness; 503 when unavailable |
 | GET | `auth/session/` | — | User or null, CSRF token |
 | POST | `auth/register/` | username, email, password1, password2 | Creates account/profile and signs in; HTTP 201 |
 | POST | `auth/login/` | username, password | Signs in |
@@ -72,10 +73,12 @@ Counters live in the database, use atomic increments, and survive session change
 - Login and reset confirmation: 10 per 5 minutes per IP; login also limits by username across IPs.
 - Other write endpoints: 30 per minute per IP, per endpoint.
 
-Only `REMOTE_ADDR` is trusted. Before deployment behind a reverse proxy, configure an authoritative client-address strategy and edge rate limiting; do not blindly trust browser-supplied forwarding headers. Until then, proxied users may share a backend IP bucket. Clean expired counters with `python manage.py cleanup_rate_limits`.
+Development trusts only `REMOTE_ADDR`. The supplied private Docker topology overwrites and validates `X-Bintrest-Client-IP` at Caddy before assigning the backend client address. Never expose its Django port directly or trust a browser-supplied proxy header. Additional proxies require a reviewed address strategy. Clean expired counters with `python manage.py cleanup_rate_limits`.
 
 The Django admin uses Django's staff/permission system. It is a trusted administration interface, separate from owner-only public API access.
 
 ## Same-origin routing
 
 Vite proxies `/api/`, `/admin/`, `/static/`, and `/media/` to Django in development and preview. Use one browser origin throughout an account flow. Production hosting should serve the built SPA with fallback to `index.html`, route these backend prefixes to Django, and configure `FRONTEND_ORIGIN`, allowed hosts, and HTTPS. No permissive CORS is enabled.
+
+The portable implementation is described in [DEPLOYMENT.md](DEPLOYMENT.md). Readiness checks database access and the migrations table; it does not replace storage, email, or full journey monitoring.

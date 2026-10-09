@@ -48,7 +48,9 @@ button:disabled {
 }
 a:focus-visible,
 button:focus-visible,
-input:focus-visible {
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
   outline: 2px solid #8dcaff;
   outline-offset: 5px;
 }
@@ -385,6 +387,8 @@ p {
 .form-switch a {
   color: #c6dff3;
   margin-left: 4px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 .form-switch a:hover,
 .text-link:hover {
@@ -392,7 +396,7 @@ p {
 }
 .form-footnote {
   border-top: 1px solid #2b333b;
-  color: #73818c;
+  color: #8d9ba6;
   margin-top: 38px;
   padding-top: 24px;
   display: flex;
@@ -801,6 +805,7 @@ p {
   }
   .type-study > span {
     font-size: 20px;
+    visibility: hidden;
   }
   .type-study small {
     display: none;

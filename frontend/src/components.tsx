@@ -50,8 +50,15 @@ export function Modal({
   const id = useId();
   useEffect(() => {
     const dialog = ref.current!;
+    const trigger =
+      document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
     dialog.showModal();
-    return () => dialog.close();
+    return () => {
+      dialog.close();
+      if (trigger?.isConnected) trigger.focus({ preventScroll: true });
+    };
   }, []);
   return (
     <dialog

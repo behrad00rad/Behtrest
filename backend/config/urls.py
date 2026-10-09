@@ -2,11 +2,12 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
-from common.api import health
+from common.api import health, ready
 
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/health/", health),
+    path("api/ready/", ready),
     path("api/auth/", include("accounts.urls")),
     path("api/", include("collection.urls")),
 ]

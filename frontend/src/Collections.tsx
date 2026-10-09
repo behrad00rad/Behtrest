@@ -328,12 +328,14 @@ export function ProfilePage() {
       <div className="tabs profile-tabs">
         <button
           className={tab === "pins" ? "active" : ""}
+          aria-pressed={tab === "pins"}
           onClick={() => setParams({})}
         >
           Created pins
         </button>
         <button
           className={tab === "boards" ? "active" : ""}
+          aria-pressed={tab === "boards"}
           onClick={() => setParams({ tab: "boards" })}
         >
           Boards
@@ -505,6 +507,7 @@ export function BoardDetail() {
                     className="icon-button"
                     aria-label={`Use ${post.title} as board cover`}
                     title="Use as cover"
+                    aria-pressed={board.cover_post_id === post.id}
                     disabled={busy}
                     onClick={() => void setCover(post)}
                   >

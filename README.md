@@ -2,7 +2,7 @@
 
 A blue, dark-themed Pinterest-inspired app, originally built by Amirhossein Ghazanfari Rad at age 13 as a CS50x final project.
 
-[Original video demo](https://youtu.be/EODyZn-WkIM) · [Original README](docs/README-original.md) · [V2 task plan](TASKS.md) · [Verification](docs/VERIFICATION.md)
+[Original video demo](https://youtu.be/EODyZn-WkIM) · [Original README](docs/README-original.md) · [V2 task plan](TASKS.md) · [Verification](docs/VERIFICATION.md) · [Deployment](docs/DEPLOYMENT.md)
 
 ## Why I made it
 
@@ -16,6 +16,7 @@ Connecting React, a Python API, a database, accounts, image uploads, and comment
 - **October 9, 2026:** revisited the project, initialized a local Git repository, and planned a second version using Django and React.
 - **October 9, 2026, V2 foundation:** completed tasks 1–4: V1 reproduction, Django/React setup, data models, and secure account flows.
 - **October 9, 2026, V2 collections:** completed tasks 5–8: safe image uploads, paginated feeds and comments, profiles, boards, saves, tags, and search.
+- **October 9, 2026, release preparation:** completed task 9's browser automation, accessibility polish, and CI; prepared task 11's portable Docker deployment candidate and verified backup/restore tools. Container runtime verification remains pending because the local Docker engine is unavailable.
 
 The original README is preserved verbatim in `docs/README-original.md`, including its wording and acknowledgments. Original source remains unchanged in `btrest/`, with Git tag `legacy-v1` preserving its initial snapshot. V2 lives in separate `backend/` and `frontend/` directories.
 
@@ -37,6 +38,8 @@ Implemented:
 - Profile editing and avatars, public/private boards, board covers, and saved pins.
 - Tags, validated source links, pin and people search, and empty/error/retry states.
 - 24 repeatable synthetic illustration posts; failed media deletions have a durable retry queue.
+- Automated desktop/mobile browser journeys and accessibility checks, plus CI for backend, frontend, and container smoke checks.
+- A Docker/Caddy/Gunicorn deployment candidate, production configuration checks, database readiness, and verified V2 backup/restore commands.
 
 Private boards hide their collections; the original pins remain public. Local development uses filesystem media storage. Retry failed deletions with `python backend/manage.py cleanup_media` using the project virtual environment.
 
@@ -93,12 +96,17 @@ Admin is available at `http://127.0.0.1:5173/admin/`. Synthetic demo accounts ha
 .\.venv\Scripts\python.exe backend/manage.py makemigrations --check --dry-run
 .\.venv\Scripts\python.exe backend/manage.py test accounts collection
 cd frontend
+npm run format:check
 npm run build
+npx playwright install chromium
+npm run test:e2e
 ```
 
-47 backend tests passed, Django reported no issues or migration drift, and the frontend production build passed. Browser checks covered accounts and the upload → comment → private board → profile journey, search, and desktop/mobile layouts. See [verification details](docs/VERIFICATION.md) and [API conventions](docs/API.md).
+54 backend tests are verified, Django reported no issues or migration drift, and the frontend formatting/production build checks passed. Both desktop and mobile end-to-end journeys pass, including registration, uploads, comments, private boards, profile/avatar editing, pagination, search, error recovery, and logout. Automated axe checks found no WCAG A/AA violations in the tested screens; these checks complement manual review.
 
-![V2 inspiration feed](docs/screenshots/v2-feed-desktop.jpg)
+The browser runner creates a separate temporary V2 database/media directory and uses ports 8001/5174. It never reuses normal preview data. If the browser download is unavailable and Edge is installed, run `$env:BINTREST_BROWSER_CHANNEL='msedge'` before `npm run test:e2e`. CI uses bundled Chromium. See [verification details](docs/VERIFICATION.md) and [API conventions](docs/API.md).
+
+![V2 inspiration feed](docs/screenshots/v2-verified-feed-desktop.png)
 
 ## Original version (v1)
 
@@ -129,6 +137,9 @@ docs/README-original.md  Unedited original project description
 docs/LEGACY.md           V1 reproduction results and visual references
 docs/API.md              API contract, authentication, and permissions
 docs/VERIFICATION.md     Checks performed and screenshots
+docs/DEPLOYMENT.md       HTTPS deployment, storage, backups, recovery, and operations
+deploy/                  Dockerfiles, Compose, Caddy, production environment example
+.github/workflows/       Backend, frontend, browser, and container verification
 TASKS.md                 Proposed V2 tasks and completion criteria
 ```
 
@@ -161,7 +172,11 @@ Preserve the dark/blue identity while rebuilding the backend with Django and mod
 
 Use one backend and one frontend, same-origin session authentication with CSRF protection, and SQLite for initial development. Production storage choices will depend on deployment requirements.
 
-[V2 tasks](TASKS.md) describe the sequence, acceptance criteria, and deferred ideas. Tasks 1–8 were approved and completed; task 9 (polish, end-to-end automation, and CI) is the next review point. Legacy import and deployment remain pending. Nothing has been deployed.
+[V2 tasks](TASKS.md) describe the sequence, acceptance criteria, and deferred ideas. Tasks 1–9 are complete. Task 11's deployment candidate is prepared for review; container build/HTTPS verification must still run on an available Docker engine. Task 10's legacy import remains deferred. Nothing has been deployed.
+
+### Deployment candidate
+
+The chosen target is a small Linux server using Docker, Caddy HTTPS, Gunicorn, persistent SQLite, and filesystem media. [Deployment instructions](docs/DEPLOYMENT.md) include environment generation, SMTP delivery, setup commands, backup/restore drills, monitoring, upgrades, and rollback. Docker Compose syntax and production Django checks passed locally; the container CI job is prepared but has not run remotely. Confirm its result before publishing.
 
 ## Acknowledgments
 

@@ -18,6 +18,8 @@ __pycache__/
 build/
 dist/
 coverage/
+playwright-report/
+test-results/
 *.tsbuildinfo
 *.log
 # Local databases and uploads

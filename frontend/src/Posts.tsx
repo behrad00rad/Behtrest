@@ -51,13 +51,18 @@ export function Explore() {
         </Link>
       </div>
       <div className="filter-chips" aria-label="Filter by tag">
-        <button className={!tag ? "active" : ""} onClick={() => setParams({})}>
+        <button
+          className={!tag ? "active" : ""}
+          aria-pressed={!tag}
+          onClick={() => setParams({})}
+        >
           For you
         </button>
         {(tags.data?.items || []).slice(0, 12).map((item) => (
           <button
             key={item}
             className={tag === item ? "active" : ""}
+            aria-pressed={tag === item}
             onClick={() => setParams({ tag: item })}
           >
             {item.replaceAll("-", " ")}
@@ -104,6 +109,7 @@ export function Search() {
         <div className="tabs">
           <button
             className={kind === "posts" ? "active" : ""}
+            aria-pressed={kind === "posts"}
             onClick={() =>
               setParams({ q: query, kind: "posts", ...(tag ? { tag } : {}) })
             }
@@ -112,6 +118,7 @@ export function Search() {
           </button>
           <button
             className={kind === "people" ? "active" : ""}
+            aria-pressed={kind === "people"}
             onClick={() => setParams({ q: query, kind: "people" })}
           >
             People

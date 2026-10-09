@@ -7,11 +7,13 @@ export function useResource<T>(path: string) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [version, setVersion] = useState(0);
+  const previousPath = useRef(path);
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
     setError("");
-    setData(null);
+    if (previousPath.current !== path) setData(null);
+    previousPath.current = path;
     request<T>(path, "GET", undefined, true, controller.signal)
       .then((value) => {
         if (!controller.signal.aborted) setData(value);

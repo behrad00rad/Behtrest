@@ -56,3 +56,24 @@ The browser journey was manual; a repeatable end-to-end test and CI remain task 
 ![V2 desktop feed](screenshots/v2-feed-desktop.jpg)
 
 ![V2 mobile feed](screenshots/v2-feed-mobile.jpg)
+
+## Tasks 9 and 11 release candidate
+
+Verified October 9, 2026:
+
+- Backend: 54 tests in the final suite. Backup tests round-trip into a separate empty directory, validate image references/checksums, reject missing media and tampered/traversal archives, and refuse overwriting data. Production tests reject weak secrets, HTTP/mismatched origins, wildcard hosts, and incompatible/missing SMTP configuration.
+- Both Playwright desktop and mobile journeys passed using installed Edge. Each run starts Django against a new temporary database/media directory on port 8001 and Vite on 5174. Chromium's download endpoint returned a regional 403; no browser download workaround was used. CI installs bundled Chromium.
+- Browser coverage: registration, upload preview/publication, comments, native dialog Escape/focus restoration, private-board creation/save/cover, profile and avatar updates, stable multi-page feed without duplicate cards, pin/people search, simulated API failure/retry/no-results, logout/reload, and private-board rejection after logout.
+- Axe WCAG 2 A/AA and 2.1 A/AA rules passed on registration, feed, detail, save dialog, board, profile/boards, and people results at desktop/mobile dimensions. The test checks horizontal document overflow and captures screenshots. Automated accessibility checks do not prove complete accessibility.
+- Polished low-contrast footnote text, underlined account links, decorative mobile artwork, labels for hidden mobile navigation text, textarea/select focus, selected filters, dialog focus restoration, and profile refresh behavior that previously interrupted avatar editing.
+- Frontend formatting, TypeScript/Vite build, Python compilation, Django system checks, and migration drift checks passed.
+- Docker Compose configuration validation passed using an ignored synthetic environment. Production `check --deploy --fail-level WARNING` passed, with only two intentionally silenced HSTS policy checks (`security.W005` and `security.W021`), documented in `DEPLOYMENT.md`.
+- The disposable recovery script passed fresh migrations → seeding → backup → verified restore, recovering 24 pins, 4 boards, 24 saves, and 48 normalized image/thumbnail files.
+
+CI is configured for backend checks/tests, frontend formatting/build, browser journeys, and container build/HTTPS smoke checks. No repository remote was pushed and no CI run is claimed. Docker Desktop's engine was unavailable locally despite a startup attempt; the container job must run on an available engine before publishing. SMTP credentials, real delivery, DNS, and a live server have not been configured or tested.
+
+Task 9 is complete. Task 11 is prepared for review with container runtime verification pending. Task 10 and public deployment remain deferred; V1 data/source were not changed.
+
+![Verified desktop feed](screenshots/v2-verified-feed-desktop.png)
+
+![Verified mobile feed](screenshots/v2-verified-feed-mobile.png)

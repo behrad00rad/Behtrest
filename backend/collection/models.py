@@ -42,6 +42,7 @@ class Post(TimestampedModel):
 
 
 class ImageScan(TimestampedModel):
+    stored_bytes = models.PositiveBigIntegerField(default=0)
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     post = models.OneToOneField(Post, null=True, blank=True, on_delete=models.CASCADE, related_name="image_scan")
     profile = models.ForeignKey("accounts.Profile", null=True, blank=True, on_delete=models.CASCADE)
@@ -56,6 +57,21 @@ class ImageScan(TimestampedModel):
     retry_at = models.DateTimeField(null=True, blank=True)
     scores = models.JSONField(default=dict)
     error = models.CharField(max_length=80, blank=True)
+
+
+class ImageQuotaLock(models.Model):
+    """Singleton row serializes quota checks across upload workers."""
+    pass
+
+
+class ImageUploadUsage(models.Model):
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    day = models.DateField()
+    uploads = models.PositiveIntegerField(default=0)
+    normalized_bytes = models.PositiveBigIntegerField(default=0)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["owner", "day"], name="unique_image_upload_day")]
 
 
 class Comment(TimestampedModel):

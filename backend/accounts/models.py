@@ -24,6 +24,8 @@ class Referral(models.Model):
     user = models.OneToOneField("User", on_delete=models.CASCADE, related_name="referral")
     code = models.CharField(max_length=32, unique=True, default=referral_code, editable=False)
     used = models.PositiveIntegerField(default=0, editable=False)
+    enabled = models.BooleanField(default=True)
+    allowance_override = models.PositiveIntegerField(null=True, blank=True, help_text="Leave empty to use the global allowance.")
 
 
 class ReferralRedemption(models.Model):

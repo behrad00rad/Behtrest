@@ -34,7 +34,30 @@ Jobs persist in SQLite with a five-minute lease and unique claim token. Expired 
 
 Quarantine originals and thumbnails are included and checked by V2 backups. Stop **both the API and moderation worker** before an offline backup/restore, then restart both. Queue state survives restarts/restores. Keep a pre-upgrade backup; rolling back to older code requires restoring compatible data rather than running old code against pending uploads.
 
-Run `python backend/manage.py cleanup_image_scans` periodically. Approved/canceled private previews expire after seven days; unreferenced quarantine files expire after 24 hours. Pending/review/rejected evidence is retained until its pin/profile is deleted or the upload is canceled and cleaned up. Account/storage quotas should be planned as usage grows.
+Run `python backend/manage.py cleanup_image_scans` periodically. Approved/canceled private previews expire after seven days; unreferenced quarantine files expire after 24 hours. Pending/review/rejected evidence is retained until its pin/profile is deleted or the upload is canceled and cleaned up. Daily usage records expire after 30 days.
+
+## Upload quotas and worker health
+
+When moderation is enabled, defaults allow 100 public-pin/avatar uploads per account per UTC day, 20 pending/scanning/review images per account, 256 MiB of referenced quarantine files per account, and 2 GiB globally. Normalized originals and thumbnails both count, including retained approved previews and rejected evidence. Avatar replacement can replace an existing queued avatar at the queue limit, but still consumes a daily upload and retained storage. Deleted uploads do not reset daily usage. Failed requests consume nothing. Quota checks serialize across workers and return HTTP 429 with a useful message before quarantine files are written.
+
+Configure `BEHTREST_IMAGE_UPLOADS_PER_DAY`, `BEHTREST_IMAGE_PENDING_PER_USER`, `BEHTREST_IMAGE_QUARANTINE_USER_MB`, and `BEHTREST_IMAGE_QUARANTINE_TOTAL_MB` with positive integers. Existing quarantine files are accounted for when the first new upload is checked. These limits cover moderation quarantine, not total public-media/chat disk usage; monitor free disk space and run cleanup. Old approved public content and private chat attachments are not automatically screened or included in these quotas.
+
+The Docker worker reports health from a heartbeat after model initialization. A heartbeat older than two minutes marks it unhealthy; process crashes are restarted by Compose. An unhealthy state requires investigation and is not an automatic publication or rejection decision.
+
+## Local calibration
+
+Create a JSON manifest beside your locally held, appropriately labeled test images:
+
+```json
+[
+  {"id": "ordinary-photo", "file": "photo.jpg", "expected": "allow"},
+  {"id": "policy-example", "file": "example.jpg", "expected": "block"}
+]
+```
+
+Run `python backend/manage.py evaluate_image_model path/to/manifest.json --output path/to/report.json`. Optional `--review 0.35 --reject 0.75` compares candidate thresholds without changing production configuration. The report contains decisions, relevant confidence scores, inference/preparation time, false rejections, blocked images approved, and review rate. Files must be inside the manifest directory; nothing is downloaded, uploaded or published. Missing classes produce null rates rather than a misleading zero.
+
+Use separate calibration and validation samples covering actual site content, drawings, small/obscured subjects and nonsexual nudity under the site's policy. Tune using calibration samples and check the untouched validation set before changing environment thresholds. A benign-fixture run verifies tooling, not nudity-detection accuracy. No representative labeled corpus is bundled, and the current thresholds remain uncalibrated defaults.
 
 ## API additions
 

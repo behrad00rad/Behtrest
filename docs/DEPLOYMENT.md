@@ -119,7 +119,7 @@ For a full recovery drill, run the matching Git revision on a separate hostname 
 
 ## Local container verification
 
-The CI `containers` job builds both images, runs production checks/migrations/collectstatic, starts an isolated stack on loopback ports 8080/8443, and checks HTTPS readiness, SPA routing, static assets, secure CSRF cookies, and JSON errors. It uses a synthetic SMTP hostname and sends no mail. Caddy's localhost certificate is accepted only by the CI smoke probe; public deployment must use a valid certificate.
+The CI `containers` job builds both images, runs production checks/migrations/collectstatic, starts an isolated stack on loopback ports 8080/8443, and checks HTTPS readiness, SPA routing, static assets, secure CSRF cookies, and JSON errors. It registers a synthetic account, checks private quarantine access and real-worker approval, verifies Redis group delivery, queues an upload with the worker stopped, restarts all services, and verifies stored media and queued-job recovery. It uses a synthetic SMTP hostname and sends no mail. Caddy's localhost certificate is accepted only by the CI smoke probe; public deployment must use a valid certificate. The smoke test's temporary synthetic credentials are removed after the restored phase; never run these probes against a real user's deployment.
 
 To reproduce on a disposable Docker host, run `python3 scripts/prepare_container_smoke.py` in a clean checkout, then the container job's commands in `.github/workflows/verify.yml`. That script refuses to overwrite `deploy/.env`. Do not use its synthetic environment for public hosting.
 

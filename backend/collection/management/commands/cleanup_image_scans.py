@@ -4,7 +4,7 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.utils import timezone
-from collection.models import ImageScan
+from collection.models import ImageScan, ImageUploadUsage
 from collection.image_moderation import storage
 
 
@@ -21,7 +21,9 @@ class Command(BaseCommand):
                         try: storage().delete(name)
                         except OSError: continue
                         setattr(scan, field, '')
-                scan.save(update_fields=['original', 'thumbnail'])
+                scan.stored_bytes = sum(storage().size(name) for name in [scan.original, scan.thumbnail] if name and storage().exists(name))
+                scan.save(update_fields=['original', 'thumbnail', 'stored_bytes'])
+            ImageUploadUsage.objects.filter(day__lt=(now - timedelta(days=30)).date()).delete()
         referenced = {name for pair in ImageScan.objects.values_list('original', 'thumbnail') for name in pair if name}
         root = Path(settings.PRIVATE_MEDIA_ROOT).resolve()
         for file in (root / 'quarantine').rglob('*'):

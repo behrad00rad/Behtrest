@@ -54,6 +54,13 @@ jobs:
       - run: docker compose --env-file deploy/.env -f deploy/compose.yaml run --rm backend python manage.py collectstatic --noinput
       - run: docker compose --env-file deploy/.env -f deploy/compose.yaml up -d --wait
       - run: python scripts/container_smoke.py
+      - run: docker compose --env-file deploy/.env -f deploy/compose.yaml exec -T backend python manage.py check_channel_delivery
+      - run: docker compose --env-file deploy/.env -f deploy/compose.yaml stop moderation
+      - run: python scripts/container_smoke.py --phase queue
+      - run: docker compose --env-file deploy/.env -f deploy/compose.yaml restart backend redis web moderation
+      - run: docker compose --env-file deploy/.env -f deploy/compose.yaml up -d --wait
+      - run: python scripts/container_smoke.py --phase restored
+      - run: docker compose --env-file deploy/.env -f deploy/compose.yaml exec -T backend python manage.py check_channel_delivery
       - run: docker compose --env-file deploy/.env -f deploy/compose.yaml logs --tail 100
         if: failure()
       - run: docker compose --env-file deploy/.env -f deploy/compose.yaml down

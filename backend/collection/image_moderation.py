@@ -9,15 +9,15 @@ from django.conf import settings
 from django.core.files.base import ContentFile
 from django.core.files.storage import FileSystemStorage
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Q, Sum
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from PIL import Image
 
-from common.api import endpoint, success
+from common.api import ApiError, endpoint, success
 from common.media import store_images, delete_files
-from .models import ImageScan, Post, ContentReport, Follow
+from .models import ImageScan, Post, ContentReport, Follow, ImageQuotaLock, ImageUploadUsage
 from .activity import emit
 
 MODEL_SHA256 = "c15d8273adad2d0a92f014cc69ab2d6c311a06777a55545f2c4eb46f51911f0f"
@@ -29,9 +29,31 @@ def storage():
     return FileSystemStorage(location=settings.PRIVATE_MEDIA_ROOT)
 
 
+@transaction.atomic
 def enqueue(owner, prepared, *, post=None, profile=None):
     original, thumb, width, height = prepared
+    quota, _ = ImageQuotaLock.objects.get_or_create(pk=1)
+    ImageQuotaLock.objects.select_for_update().get(pk=quota.pk)
+    usage, _ = ImageUploadUsage.objects.get_or_create(owner=owner, day=timezone.now().date())
+    if usage.uploads >= settings.IMAGE_UPLOADS_PER_DAY:
+        raise ApiError("upload_quota", "You have reached today's image upload limit. Try again tomorrow.", 429)
+    pending = ImageScan.objects.filter(owner=owner, status__in=["pending", "scanning", "review"])
+    if profile: pending = pending.exclude(profile=profile)
+    if pending.count() >= settings.IMAGE_PENDING_PER_USER:
+        raise ApiError("upload_quota", "Too many images are awaiting checks. Wait for them to finish or remove an upload.", 429)
     store = storage()
+    # Account for uploads created before stored-byte tracking was introduced.
+    for existing in ImageScan.objects.filter(stored_bytes=0).exclude(original=""):
+        size = sum(store.size(name) for name in [existing.original, existing.thumbnail] if name and store.exists(name))
+        ImageScan.objects.filter(pk=existing.pk).update(stored_bytes=size)
+    size = len(original) + len(thumb)
+    total = ImageScan.objects.aggregate(size=Sum("stored_bytes"))["size"] or 0
+    user_total = ImageScan.objects.filter(owner=owner).aggregate(size=Sum("stored_bytes"))["size"] or 0
+    if total + size > settings.IMAGE_QUARANTINE_TOTAL_BYTES or user_total + size > settings.IMAGE_QUARANTINE_USER_BYTES:
+        raise ApiError("upload_quota", "Image storage is full. Remove old uploads or contact an administrator.", 429)
+    usage.uploads += 1
+    usage.normalized_bytes += size
+    usage.save()
     names = []
     try:
         prefix = f"quarantine/{owner.pk}/{uuid.uuid4().hex}"
@@ -39,7 +61,7 @@ def enqueue(owner, prepared, *, post=None, profile=None):
         names.append(store.save(prefix + "-thumb.webp", ContentFile(thumb)))
         if profile:
             ImageScan.objects.filter(profile=profile, status__in=["pending", "scanning", "review", "rejected"]).update(status="canceled", token=None)
-        return ImageScan.objects.create(owner=owner, post=post, profile=profile, original=names[0], thumbnail=names[1], width=width, height=height)
+        return ImageScan.objects.create(owner=owner, post=post, profile=profile, original=names[0], thumbnail=names[1], width=width, height=height, stored_bytes=size)
     except Exception:
         for name in names: store.delete(name)
         raise
@@ -131,6 +153,8 @@ class Detector:
 
 
 def decision(scores):
+    if any(not isinstance(value, (int, float)) or not 0 <= value <= 1 for value in scores.values()):
+        raise ValueError("Invalid confidence")
     value = max(scores.values(), default=0)
     if not 0 <= value <= 1: raise ValueError("Invalid confidence")
     return "rejected" if value >= settings.IMAGE_MODERATION_REJECT else "review" if value >= settings.IMAGE_MODERATION_REVIEW else "approved"

@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { request } from "./api";
+import { Link } from "react-router-dom";
+import { useAuth } from "./auth";
 
 type Invite = {
   code: string;
@@ -7,9 +9,11 @@ type Invite = {
   limit: number;
   remaining: number;
   invite_required: boolean;
+  enabled: boolean;
 };
 
 export default function Referrals() {
+  const auth = useAuth();
   const [invite, setInvite] = useState<Invite | null>(null);
   const [message, setMessage] = useState("");
   useEffect(() => {
@@ -32,6 +36,11 @@ export default function Referrals() {
     <section className="image-check" aria-label="Your invites">
       <div>
         <h3>Invite friends</h3>
+        {auth.user?.can_manage_referrals && (
+          <Link className="text-link" to="/settings/referrals">
+            Manage invites
+          </Link>
+        )}
         {invite && (
           <>
             <p>
@@ -56,6 +65,11 @@ export default function Referrals() {
               ? "Loading invites…"
               : "Share your code with someone you want to invite.")}
         </p>
+        {invite && !invite.enabled && (
+          <p>
+            Invites are disabled for your account. Contact an administrator.
+          </p>
+        )}
       </div>
     </section>
   );

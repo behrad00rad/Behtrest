@@ -20,6 +20,7 @@ def serialize_user(user):
     return {
         "id": user.pk, "username": user.username, "email": user.email,
         "can_moderate": user.is_staff and user.has_perm("collection.review_reports"),
+        "can_manage_referrals": user.is_staff and user.has_perms(["accounts.change_registrationpolicy", "accounts.change_referral"]),
         "profile": {"display_name": user.profile.display_name, "bio": user.profile.bio, "avatar": user.profile.avatar.url if user.profile.avatar else None, "avatar_scan": {"id": scan.pk, "status": scan.status} if scan else None},
     }
 
@@ -42,12 +43,13 @@ def register(request):
         code = code.strip()
         referral = None
         if code or policy.invite_required:
-            referral = Referral.objects.select_for_update().filter(code=code, user__is_active=True).first()
-            if not referral or referral.used >= policy.referrals_per_user:
+            referral = Referral.objects.select_for_update().filter(code=code, user__is_active=True, enabled=True).first()
+            limit = referral.allowance_override if referral and referral.allowance_override is not None else policy.referrals_per_user
+            if not referral or referral.used >= limit:
                 raise ApiError("invalid_referral", "This referral code is invalid or has no invites remaining.", fields={"referral_code": ["Ask a member for an available invite code."]})
             # Conditional increment enforces the allowance even on databases where
             # row locks are unavailable. Account creation rolls it back on failure.
-            if not Referral.objects.filter(pk=referral.pk, used__lt=policy.referrals_per_user).update(used=F("used") + 1):
+            if not Referral.objects.filter(pk=referral.pk, used__lt=limit, enabled=True, code=code).update(used=F("used") + 1):
                 raise ApiError("invalid_referral", "This code has no invites remaining.")
         user = form.save()
         if referral:
@@ -68,8 +70,9 @@ def registration_policy(request):
 def referrals(request):
     policy, _ = RegistrationPolicy.objects.get_or_create(pk=1)
     referral, _ = Referral.objects.get_or_create(user=request.user)
-    return success({"code": referral.code, "used": referral.used, "limit": policy.referrals_per_user,
-                    "remaining": max(0, policy.referrals_per_user - referral.used), "invite_required": policy.invite_required})
+    limit = referral.allowance_override if referral.allowance_override is not None else policy.referrals_per_user
+    return success({"code": referral.code, "used": referral.used, "limit": limit, "enabled": referral.enabled,
+                    "remaining": max(0, limit - referral.used) if referral.enabled else 0, "invite_required": policy.invite_required})
 
 
 @never_cache

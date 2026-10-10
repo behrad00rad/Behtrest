@@ -1,4 +1,5 @@
 import time
+from pathlib import Path
 from django.core.management.base import BaseCommand
 from collection.image_moderation import Detector, run_one
 
@@ -12,7 +13,9 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         detector = Detector()
         self.stdout.write("Local image moderation worker ready (CPU, one image at a time).")
+        heartbeat = Path('/tmp/behtrest-moderation-heartbeat') if Path('/tmp').is_dir() else None
         while True:
+            if heartbeat: heartbeat.touch()
             worked = run_one(detector)
             if options["once"]: break
             if not worked: time.sleep(2)

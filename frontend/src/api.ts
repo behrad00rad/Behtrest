@@ -1,4 +1,5 @@
 export type User = {
+  can_manage_referrals?: boolean;
   can_moderate: boolean;
   id: number;
   username: string;

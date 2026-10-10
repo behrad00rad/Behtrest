@@ -25,6 +25,7 @@ import { MyBoards, ProfilePage, BoardDetail } from "./Collections";
 import { Avatar } from "./components";
 import { useAuth } from "./auth";
 import AccountForm from "./AccountForm";
+import ReferralSettings from "./ReferralSettings";
 import Chat from "./Chat";
 import { useChat } from "./ChatContext";
 import { ActivityNav, Notifications, Moderation } from "./Community";
@@ -291,6 +292,14 @@ export default function App() {
           </div>
         ) : (
           <Routes>
+            <Route
+              path="/settings/referrals"
+              element={
+                <Protected>
+                  <ReferralSettings />
+                </Protected>
+              }
+            />
             <Route
               path="/notifications"
               element={

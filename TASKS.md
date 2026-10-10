@@ -182,6 +182,18 @@ See `docs/COMMUNITY.md` for behavior and moderator setup and `docs/VERIFICATION.
 
 See `docs/IMAGE-MODERATION.md` and `docs/VERIFICATION.md`. Existing public uploads are not retroactively scanned.
 
+## Referral controls and operating safeguards (approved October 10, 2026)
+
+- [x] Commit and push local image moderation and referral-registration checkpoint (`557ef1e`).
+- [x] Add audited in-app registration settings, per-member allowances, invite disablement and code replacement.
+- [x] Add daily upload, pending-image and quarantine-storage quotas; retain usage across upload deletion.
+- [x] Add worker heartbeat health and local labeled-corpus evaluation tools.
+- [x] Verify backend and desktop/mobile referral journeys, recovery, builds and migrations.
+- [x] Diagnose the CI Redis ownership failure and run Redis as its unprivileged image user.
+- [ ] Complete Linux container HTTPS/Redis/worker-restart/persistence CI verification after the fix.
+
+Representative nudity calibration samples are not bundled. Detection thresholds remain unchanged pending actual validation data. Private chat screening, retroactive scans, SMTP delivery and legacy import remain separate work.
+
 ## Review checkpoint
 
 The user approved tasks 1–9 and 11. Task 9 is complete; task 11 is prepared with container runtime verification still pending. Task 10 is deferred. No public deployment is authorized. The original completion year remains unconfirmed; do not turn the 2022 course-folder reference into a claimed completion date.

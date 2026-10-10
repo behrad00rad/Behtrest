@@ -1,7 +1,11 @@
 from django.urls import path
 from . import views
+from . import referrals
 
 urlpatterns = [
+    path("admin/referrals/settings/", referrals.settings),
+    path("admin/referrals/members/", referrals.members),
+    path("admin/referrals/members/<int:pk>/", referrals.member),
     path("registration-policy/", views.registration_policy),
     path("referrals/", views.referrals),
     path("session/", views.session),

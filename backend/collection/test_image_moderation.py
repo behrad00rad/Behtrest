@@ -23,6 +23,31 @@ class FakeDetector:
 
 @override_settings(IMAGE_MODERATION_ENABLED=True, API_RATE_LIMITS_ENABLED=False, PASSWORD_HASHERS=['django.contrib.auth.hashers.MD5PasswordHasher'])
 class ImageModerationTests(MediaTestCase):
+    @override_settings(IMAGE_UPLOADS_PER_DAY=1)
+    def test_daily_quota_survives_deleted_upload(self):
+        scan = self.upload()
+        scan.post.delete()
+        response = self.client.post('/api/posts/', {'image': self.image(), 'title': 'Second'}, HTTP_X_CSRFTOKEN=self.token)
+        self.assertEqual(response.status_code, 429)
+        self.assertEqual(Post.objects.filter(owner=self.owner).count(), 0)
+
+    @override_settings(IMAGE_PENDING_PER_USER=1)
+    def test_pending_quota_and_avatar_replacement(self):
+        scan = self.upload(avatar=True)
+        replaced = self.upload(avatar=True)
+        scan.refresh_from_db()
+        self.assertEqual(scan.status, 'canceled')
+        self.assertNotEqual(scan.pk, replaced.pk)
+        response = self.client.post('/api/posts/', {'image': self.image(), 'title': 'Queued'}, HTTP_X_CSRFTOKEN=self.token)
+        self.assertEqual(response.status_code, 429)
+
+    @override_settings(IMAGE_QUARANTINE_TOTAL_BYTES=1)
+    def test_storage_quota_leaves_no_files_or_budget_consumption(self):
+        from .models import ImageUploadUsage
+        response = self.client.post('/api/posts/', {'image': self.image(), 'title': 'Too large'}, HTTP_X_CSRFTOKEN=self.token)
+        self.assertEqual(response.status_code, 429)
+        self.assertFalse(ImageScan.objects.exists())
+        self.assertFalse(ImageUploadUsage.objects.exists())
     def setUp(self):
         super().setUp()
         root = tempfile.TemporaryDirectory()
@@ -153,6 +178,7 @@ class ImageModerationTests(MediaTestCase):
         self.assertEqual(decision({'x': 0.8}), 'rejected')
         self.assertEqual(decision({'x': 0.4}), 'review')
         with self.assertRaises(ValueError): decision({'x': float('nan')})
+        with self.assertRaises(ValueError): decision({'x': 0.01, 'y': float('nan')})
         with override_settings(IMAGE_MODERATION_MODEL='/missing/model.onnx'):
             with self.assertRaises(FileNotFoundError): Detector()
 

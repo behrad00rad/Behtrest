@@ -16,7 +16,7 @@ class RegistrationPolicyAdmin(admin.ModelAdmin):
 
 @admin.register(Referral)
 class ReferralAdmin(admin.ModelAdmin):
-    list_display = ("user", "code", "used")
+    list_display = ("user", "code", "used", "enabled", "allowance_override")
     search_fields = ("user__username", "code")
     readonly_fields = ("user", "code", "used")
 

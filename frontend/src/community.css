@@ -240,3 +240,25 @@
 .image-check p {
   margin: 0 0 10px;
 }
+.referral-settings {
+  max-width: 850px;
+}
+.invite-member {
+  background: var(--surface, #111f33);
+  padding: 24px;
+  border-radius: 14px;
+  margin: 20px 0;
+}
+.invite-member .field {
+  margin: 18px 0 10px;
+  max-width: 340px;
+}
+.invite-member code {
+  overflow-wrap: anywhere;
+}
+.invite-actions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+}

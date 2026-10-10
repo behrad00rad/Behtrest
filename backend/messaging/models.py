@@ -28,6 +28,7 @@ class Membership(models.Model):
 
 
 class Message(models.Model):
+    is_hidden = models.BooleanField(default=False)
     conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name="messages")
     sender = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="chat_messages")
     client_id = models.UUIDField()

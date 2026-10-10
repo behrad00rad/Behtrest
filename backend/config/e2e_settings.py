@@ -4,7 +4,7 @@ from pathlib import Path
 
 from .settings import *  # noqa: F403
 
-TEST_ROOT = Path(os.environ["BINTREST_E2E_DIR"])
+TEST_ROOT = Path(os.environ["BEHTREST_E2E_DIR"])
 DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": TEST_ROOT / "test.sqlite3", "OPTIONS": {"timeout": 20, "transaction_mode": "IMMEDIATE"}}}
 MEDIA_ROOT = TEST_ROOT / "media"
 PRIVATE_MEDIA_ROOT = TEST_ROOT / "private_media"

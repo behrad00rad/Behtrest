@@ -1,5 +1,6 @@
 from django.contrib import admin
 from .models import Board, Comment, Post, SavedPost, Tag
+from .models import ContentReport, ModerationLog
 
 
 @admin.register(Post)
@@ -35,3 +36,28 @@ class SavedPostAdmin(admin.ModelAdmin):
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin):
     search_fields = ("name",)
+
+
+@admin.register(ContentReport)
+class ContentReportAdmin(admin.ModelAdmin):
+    list_display = ("id", "kind", "target_id", "target_user", "status", "created_at")
+    list_filter = ("status", "kind")
+    search_fields = ("reason", "target_user__username", "reporter__username")
+    readonly_fields = ("reporter", "kind", "target_id", "target_user", "reason", "evidence", "status", "created_at", "updated_at")
+
+    def has_add_permission(self, request): return False
+    def has_delete_permission(self, request, obj=None): return False
+    def has_change_permission(self, request, obj=None): return False
+    def has_view_permission(self, request, obj=None):
+        return request.user.has_perm("collection.review_reports")
+
+
+@admin.register(ModerationLog)
+class ModerationLogAdmin(admin.ModelAdmin):
+    list_display = ("id", "report", "moderator", "action", "created_at")
+    readonly_fields = ("report", "moderator", "action", "reason", "created_at")
+    def has_add_permission(self, request): return False
+    def has_delete_permission(self, request, obj=None): return False
+    def has_change_permission(self, request, obj=None): return False
+    def has_view_permission(self, request, obj=None):
+        return request.user.has_perm("collection.review_reports")

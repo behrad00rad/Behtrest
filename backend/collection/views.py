@@ -15,10 +15,12 @@ from .forms import BoardForm, CommentForm, PostMetadataForm
 from .models import Board, Comment, Post, SavedPost, Tag
 from .pagination import paginate
 from .serializers import author_data, board_data, comment_data, post_data
+from .models import Follow
+from .activity import emit
 
 
 def posts_query():
-    return Post.objects.filter(owner__is_active=True).select_related('owner__profile').prefetch_related('tags')
+    return Post.objects.filter(owner__is_active=True, is_hidden=False).select_related('owner__profile').prefetch_related('tags')
 
 
 def require_user(request):
@@ -81,6 +83,14 @@ def feed(request):
     tag = request.GET.get('tag', '').strip().lower()
     owner = request.GET.get('owner', '').strip().lower()
     sort = request.GET.get('sort', 'newest')
+    following = request.GET.get('following', '0')
+    if following not in ('0', '1'):
+        raise ApiError('invalid_filter', 'Choose the discovery or following feed.')
+    if following == '1':
+        require_user(request)
+        query = query.filter(owner_id__in=Follow.objects.filter(follower=request.user).values('target_id'))
+        from messaging.models import Block
+        query = query.exclude(owner_id__in=Block.objects.filter(user=request.user).values('target_id')).exclude(owner_id__in=Block.objects.filter(target=request.user).values('user_id'))
     if sort not in ('newest', 'oldest'):
         raise ApiError('invalid_filter', 'Choose newest or oldest pins.')
     if len(text) > 100 or len(tag) > 40 or len(owner) > 150:
@@ -93,7 +103,7 @@ def feed(request):
         query = query.filter(tags__name=tag)
     if owner:
         query = query.filter(owner__username=owner)
-    items, cursor = paginate(query, request, {'kind': 'feed', 'q': text, 'tag': tag, 'owner': owner, 'sort': sort}, ascending=sort == 'oldest')
+    items, cursor = paginate(query, request, {'kind': 'feed', 'q': text, 'tag': tag, 'owner': owner, 'sort': sort, 'following': request.user.pk if following == '1' else None}, ascending=sort == 'oldest')
     return success({'items': [post_data(post) for post in items], 'next_cursor': cursor})
 
 
@@ -114,6 +124,8 @@ def create_post(request):
             post.full_clean(exclude=['tags'])
             post.save()
             assign_tags(post, tags)
+            for edge in Follow.objects.filter(target=request.user, follower__is_active=True).select_related('follower'):
+                emit(edge.follower, request.user, 'pin', f'pin:{post.pk}', post)
     except Exception:
         delete_files(names)
         raise
@@ -149,22 +161,24 @@ def post_owner_actions(request, pk):
 
 @endpoint(['GET', 'POST'], rate=(30, 60))
 def comments(request, pk):
-    post = get_object_or_404(Post, pk=pk, owner__is_active=True)
+    post = get_object_or_404(Post, pk=pk, owner__is_active=True, is_hidden=False)
     if request.method == 'GET':
-        query = post.comments.filter(author__is_active=True).select_related('author__profile')
+        query = post.comments.filter(author__is_active=True, is_hidden=False).select_related('author__profile')
         items, cursor = paginate(query, request, {'kind': 'comments', 'post': pk}, ascending=True)
         return success({'items': [comment_data(item) for item in items], 'next_cursor': cursor})
     require_user(request)
     validate_keys(request.data, ('text',))
     comment = apply_form(Comment(author=request.user, post=post), request.data, CommentForm, ('text',))
     comment.full_clean()
-    comment.save()
+    with transaction.atomic():
+        comment.save()
+        emit(post.owner, request.user, 'comment', f'comment:{comment.pk}', post)
     return success(comment_data(comment), 201)
 
 
 @endpoint(['PATCH', 'DELETE'], authenticated=True, rate=(30, 60))
 def comment_owner_actions(request, pk):
-    comment = get_object_or_404(Comment.objects.select_related('author__profile'), pk=pk, author=request.user)
+    comment = get_object_or_404(Comment.objects.select_related('author__profile'), pk=pk, author=request.user, is_hidden=False, post__is_hidden=False)
     if request.method == 'DELETE':
         comment.delete()
         return success({'deleted': True})
@@ -224,7 +238,7 @@ def board_owner_actions(request, pk):
         if cover_id is not None:
             if not isinstance(cover_id, int) or isinstance(cover_id, bool):
                 raise ApiError('invalid_cover', 'Choose a post saved in this board.')
-            saved = get_object_or_404(SavedPost.objects.select_related('post'), board=board, post_id=cover_id, post__owner__is_active=True)
+            saved = get_object_or_404(SavedPost.objects.select_related('post'), board=board, post_id=cover_id, post__owner__is_active=True, post__is_hidden=False)
             board.cover = saved.post
         else:
             board.cover = None
@@ -236,7 +250,7 @@ def board_owner_actions(request, pk):
 @endpoint(['GET'])
 def board_posts(request, pk):
     board = visible_board(request, pk)
-    query = board.saved_posts.filter(post__owner__is_active=True).select_related('post__owner__profile').prefetch_related('post__tags')
+    query = board.saved_posts.filter(post__owner__is_active=True, post__is_hidden=False).select_related('post__owner__profile').prefetch_related('post__tags')
     text = request.GET.get('q', '').strip()
     sort = request.GET.get('sort', 'newest')
     if len(text) > 100 or sort not in ('newest', 'oldest'):
@@ -254,8 +268,11 @@ def save_to_board(request, pk):
     post_id = request.data.get('post_id')
     if not isinstance(post_id, int) or isinstance(post_id, bool):
         raise ApiError('invalid_post', 'Choose a valid post.')
-    post = get_object_or_404(Post, pk=post_id, owner__is_active=True)
-    saved, created = SavedPost.objects.get_or_create(board=board, post=post)
+    post = get_object_or_404(Post, pk=post_id, owner__is_active=True, is_hidden=False)
+    with transaction.atomic():
+        saved, created = SavedPost.objects.get_or_create(board=board, post=post)
+        if created and not board.is_private:
+            emit(post.owner, request.user, 'save', f'save:{saved.pk}', post)
     return success({'id': saved.pk, 'post_id': post.pk, 'board_id': board.pk}, 201 if created else 200)
 
 
@@ -284,7 +301,7 @@ def profile_detail(request, username):
     board_query = user.boards.all()
     if not request.user.is_authenticated or request.user.pk != user.pk:
         board_query = board_query.filter(is_private=False)
-    return success({**author_data(user), 'bio': user.profile.bio, 'post_count': user.posts.count(), 'board_count': board_query.count()})
+    return success({**author_data(user), 'bio': user.profile.bio, 'post_count': user.posts.filter(is_hidden=False).count(), 'board_count': board_query.count(), 'follower_count': user.follower_edges.filter(follower__is_active=True).count(), 'following_count': user.following_edges.filter(target__is_active=True).count(), 'is_following': request.user.is_authenticated and Follow.objects.filter(follower=request.user, target=user).exists()})
 
 
 @endpoint(['POST'], authenticated=True, rate=(30, 60), multipart=True)
@@ -333,4 +350,4 @@ def people_search(request):
 
 @endpoint(['GET'])
 def tag_list(request):
-    return success({'items': list(Tag.objects.filter(posts__owner__is_active=True).distinct().order_by('name').values_list('name', flat=True)[:100])})
+    return success({'items': list(Tag.objects.filter(posts__owner__is_active=True, posts__is_hidden=False).distinct().order_by('name').values_list('name', flat=True)[:100])})

@@ -20,35 +20,35 @@ from common.middleware import ProxyClientAddress
 
 class OperationsTests(SimpleTestCase):
     def test_production_configuration_fails_closed(self):
-        environment = {**os.environ, "DJANGO_SECRET_KEY": "synthetic-production-test-" * 4, "BINTREST_DOMAIN": "bintrest.example.invalid", "FRONTEND_ORIGIN": "https://bintrest.example.invalid", "EMAIL_HOST": "smtp.example.invalid", "DEFAULT_FROM_EMAIL": "preview@example.invalid"}
+        environment = {**os.environ, "DJANGO_SECRET_KEY": "synthetic-production-test-" * 4, "BEHTREST_DOMAIN": "behtrest.example.invalid", "FRONTEND_ORIGIN": "https://behtrest.example.invalid", "EMAIL_HOST": "smtp.example.invalid", "DEFAULT_FROM_EMAIL": "preview@example.invalid"}
         script = "import config.production as s; assert not s.DEBUG; assert s.SESSION_COOKIE_SECURE and s.CSRF_COOKIE_SECURE and s.SECURE_SSL_REDIRECT; assert '*' not in s.ALLOWED_HOSTS"
         backend = Path(__file__).resolve().parents[1]
         result = subprocess.run([sys.executable, "-c", script], cwd=backend, env=environment, capture_output=True, text=True)
         self.assertEqual(result.returncode, 0, result.stderr)
-        for changes in ({"DJANGO_SECRET_KEY": "weak"}, {"FRONTEND_ORIGIN": "http://bintrest.example.invalid"}, {"FRONTEND_ORIGIN": "https://other.example.invalid"}, {"BINTREST_DOMAIN": "*"}, {"EMAIL_HOST": ""}, {"EMAIL_USE_TLS": "1", "EMAIL_USE_SSL": "1"}):
+        for changes in ({"DJANGO_SECRET_KEY": "weak"}, {"FRONTEND_ORIGIN": "http://behtrest.example.invalid"}, {"FRONTEND_ORIGIN": "https://other.example.invalid"}, {"BEHTREST_DOMAIN": "*"}, {"EMAIL_HOST": ""}, {"EMAIL_USE_TLS": "1", "EMAIL_USE_SSL": "1"}):
             with self.subTest(changes=changes):
                 result = subprocess.run([sys.executable, "-c", script], cwd=backend, env={**environment, **changes}, capture_output=True, text=True)
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn("ImproperlyConfigured", result.stderr)
 
     def test_proxy_header_is_ignored_without_explicit_trust(self):
-        request = RequestFactory().get("/", REMOTE_ADDR="127.0.0.1", HTTP_X_BINTREST_CLIENT_IP="192.0.2.42")
+        request = RequestFactory().get("/", REMOTE_ADDR="127.0.0.1", HTTP_X_BEHTREST_CLIENT_IP="192.0.2.42")
         ProxyClientAddress(lambda request: HttpResponse())(request)
         self.assertEqual(request.META["REMOTE_ADDR"], "127.0.0.1")
 
-    @override_settings(BINTREST_TRUST_PROXY=True)
+    @override_settings(BEHTREST_TRUST_PROXY=True)
     def test_proxy_address_validation(self):
         middleware = ProxyClientAddress(lambda request: HttpResponse())
-        request = RequestFactory().get("/", HTTP_X_BINTREST_CLIENT_IP="2001:db8::42")
+        request = RequestFactory().get("/", HTTP_X_BEHTREST_CLIENT_IP="2001:db8::42")
         self.assertEqual(middleware(request).status_code, 200)
         self.assertEqual(request.META["REMOTE_ADDR"], "2001:db8::42")
-        request = RequestFactory().get("/", HTTP_X_BINTREST_CLIENT_IP="192.0.2.42, 127.0.0.1")
+        request = RequestFactory().get("/", HTTP_X_BEHTREST_CLIENT_IP="192.0.2.42, 127.0.0.1")
         self.assertEqual(middleware(request).status_code, 400)
 
 
 class BackupTests(SimpleTestCase):
     def setUp(self):
-        self.directory = tempfile.TemporaryDirectory(prefix="bintrest-backup-test-")
+        self.directory = tempfile.TemporaryDirectory(prefix="behtrest-backup-test-")
         self.addCleanup(self.directory.cleanup)
         self.root = Path(self.directory.name)
         self.database = self.root / "source.sqlite3"

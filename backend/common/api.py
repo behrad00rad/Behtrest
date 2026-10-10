@@ -119,7 +119,7 @@ def endpoint(methods, *, authenticated=False, rate=None, account_field=None, mul
 
 @endpoint(["GET"])
 def health(request):
-    return success({"status": "ok", "service": "bintrest"})
+    return success({"status": "ok", "service": "behtrest"})
 
 
 @endpoint(["GET"])
@@ -130,7 +130,7 @@ def ready(request):
             cursor.fetchone()
     except DatabaseError:
         return failure("not_ready", "The service is not ready.", 503)
-    return success({"status": "ready", "service": "bintrest"})
+    return success({"status": "ready", "service": "behtrest"})
 
 
 def csrf_failure(request, reason=""):

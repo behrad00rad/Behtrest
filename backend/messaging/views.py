@@ -159,7 +159,7 @@ def messages(request, pk):
     if request.method == "GET":
         q = request.GET.get("q", "").strip()
         if len(q) > 100: raise ApiError("invalid_filter", "Search must be at most 100 characters.")
-        if q: query = query.filter(text__icontains=q, deleted_at__isnull=True)
+        if q: query = query.filter(text__icontains=q, deleted_at__isnull=True, is_hidden=False)
         if request.GET.get("around"):
             try: anchor_id = int(request.GET["around"])
             except ValueError: raise ApiError("invalid_filter", "Choose a valid message.")
@@ -183,7 +183,7 @@ def messages(request, pk):
         existing = visible_messages(own).filter(sender=request.user, client_id=client_id).first()
         if existing: return success(message_data(existing, request.user))
         can_send(own)
-        pin = get_object_or_404(Post, pk=request.data["pin_id"], owner__is_active=True) if request.data.get("pin_id") else None
+        pin = get_object_or_404(Post, pk=request.data["pin_id"], owner__is_active=True, is_hidden=False) if request.data.get("pin_id") else None
         reply = get_object_or_404(query, pk=request.data["reply_id"]) if request.data.get("reply_id") else None
         attachment = get_object_or_404(Attachment, pk=request.data["attachment_id"], conversation_id=pk, uploader=request.user, message__isnull=True) if request.data.get("attachment_id") else None
         if not content and not pin and not attachment: raise ApiError("empty_message", "Write a message or attach an image or pin.")
@@ -204,9 +204,9 @@ def shared_media(request, pk):
     kind = request.GET.get("kind", "all")
     if kind not in ("all", "photos", "pins"):
         raise ApiError("invalid_filter", "Choose photos, pins, or all shared items.")
-    query = visible_messages(own).filter(deleted_at__isnull=True)
+    query = visible_messages(own).filter(deleted_at__isnull=True, is_hidden=False)
     photos = Q(attachment__isnull=False)
-    pins = Q(pin__isnull=False, pin__owner__is_active=True)
+    pins = Q(pin__isnull=False, pin__owner__is_active=True, pin__is_hidden=False)
     query = query.filter(photos if kind == "photos" else pins if kind == "pins" else photos | pins).select_related("attachment")
     items, cursor = paginate(query, request, ["shared-media", pk, request.user.pk, own.joined_after_id, kind])
     return success({"items": [message_data(item, request.user) for item in items], "next_cursor": cursor})
@@ -223,7 +223,7 @@ def message_actions(request, pk):
     validate_keys(request.data, ["text"])
     if request.method == "PATCH":
         contact_write(own)
-        if item.deleted_at: raise Http404
+        if item.deleted_at or item.is_hidden: raise Http404
         item.text = text(request.data, "text", 4000, True)
         item.edited_at = timezone.now()
     else:
@@ -241,7 +241,7 @@ def message_actions(request, pk):
 
 @endpoint(["POST", "DELETE"], authenticated=True, rate=(60, 60))
 def reactions(request, pk):
-    item = get_object_or_404(Message, pk=pk, deleted_at__isnull=True)
+    item = get_object_or_404(Message, pk=pk, deleted_at__isnull=True, is_hidden=False)
     own = member(request.user, item.conversation_id)
     if not own.accepted or pk <= own.joined_after_id: raise Http404
     contact_write(own)
@@ -290,7 +290,7 @@ def attachment_download(request, pk):
     attachment = get_object_or_404(Attachment.objects.select_related("message"), pk=pk)
     own = member(request.user, attachment.conversation_id)
     if attachment.message:
-        if attachment.message.deleted_at or attachment.message_id <= own.joined_after_id: raise Http404
+        if attachment.message.deleted_at or attachment.message.is_hidden or attachment.message_id <= own.joined_after_id: raise Http404
     elif attachment.uploader_id != request.user.pk: raise Http404
     storage = private_storage()
     if not storage.exists(attachment.name): raise Http404
@@ -338,6 +338,8 @@ def reports(request, pk):
     if pk <= own.joined_after_id: raise Http404
     validate_keys(request.data, ["reason"])
     report, created = Report.objects.get_or_create(user=request.user, message=item, defaults={"reason": text(request.data, "reason", 1000, True), "evidence": item.text})
+    from collection.models import ContentReport
+    ContentReport.objects.get_or_create(reporter=request.user, kind="message", target_id=item.pk, defaults={"target_user": item.sender, "reason": report.reason, "evidence": report.evidence})
     return success({"reported": True}, 201 if created else 200)
 
 

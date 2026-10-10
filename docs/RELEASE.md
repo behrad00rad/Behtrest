@@ -1,4 +1,4 @@
-# Bintrest 0.3.0 release candidate
+# Behtrest 0.3.0 release candidate
 
 Prepared October 9, 2026 for local review. Tag: `v0.3.0-rc1`.
 

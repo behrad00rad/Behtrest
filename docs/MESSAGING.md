@@ -12,7 +12,7 @@ Added October 9, 2026, after the user approved direct and group messaging. The o
 - Search conversations or their message text. Mute hides unread badge contribution and browser notifications. Archive moves a conversation to Archive; sending brings it back to the sender's inbox.
 - Blocking stops direct-message writes, direct typing/presence, and invitations made by that person. Existing shared groups remain visible; you may leave them. Unblocking restores an existing direct conversation when both memberships are active.
 - A report copies the selected message text/reason for staff review in Django admin. Staff can resolve reports; there is no general chat-content admin browser. Reports do not automatically delete content or notify the reported person.
-- Browser notifications are opt-in, require browser permission and an open Bintrest tab, and use a generic preview. They are not background push notifications after the browser/tab closes. Unread counts remain available in-app.
+- Browser notifications are opt-in, require browser permission and an open Behtrest tab, and use a generic preview. They are not background push notifications after the browser/tab closes. Unread counts remain available in-app.
 
 ## Delivery and privacy
 

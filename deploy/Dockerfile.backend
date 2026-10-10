@@ -3,10 +3,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 DJANGO_SETTINGS_MODULE=config.p
 WORKDIR /app
 COPY backend/requirements-lock.txt backend/requirements-production.txt ./
 RUN pip install --no-cache-dir -r requirements-production.txt \
-    && groupadd --gid 10001 bintrest \
-    && useradd --uid 10001 --gid 10001 --no-create-home bintrest \
+    && groupadd --gid 10001 behtrest \
+    && useradd --uid 10001 --gid 10001 --no-create-home behtrest \
     && mkdir -p /data/media /data/private_media /static /backups \
-    && chown -R bintrest:bintrest /data /static /backups
+    && chown -R behtrest:behtrest /data /static /backups
 COPY backend/ ./
-USER bintrest
+USER behtrest
 CMD ["uvicorn", "config.asgi:application", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--no-access-log", "--no-proxy-headers"]

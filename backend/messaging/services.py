@@ -59,17 +59,18 @@ def notify(conversation_id, sender_id=None):
 def message_data(message, viewer):
     attachment = getattr(message, "attachment", None)
     pin = message.pin
+    unavailable = message.deleted_at or message.is_hidden
     return {
         "id": message.pk, "conversation_id": message.conversation_id,
         "client_id": str(message.client_id), "sender": author_data(message.sender),
-        "text": "" if message.deleted_at else message.text,
+        "text": "" if unavailable else message.text,
         "created_at": message.created_at.isoformat(),
         "edited_at": message.edited_at.isoformat() if message.edited_at else None,
-        "deleted": bool(message.deleted_at),
-        "reply": {"id": message.reply_id, "text": "Message deleted" if message.reply.deleted_at else message.reply.text[:150]} if message.reply and not message.deleted_at else None,
-        "pin": {"id": pin.pk, "title": pin.title, "thumbnail": pin.thumbnail.url if pin.thumbnail else pin.image.url} if pin and pin.owner.is_active and not message.deleted_at else None,
-        "attachment": {"id": attachment.pk, "url": f"/api/chat/attachments/{attachment.pk}/", "width": attachment.width, "height": attachment.height} if attachment and not message.deleted_at else None,
-        "reactions": [{"emoji": reaction.emoji, "user_id": reaction.user_id} for reaction in message.reactions.all()] if not message.deleted_at else [],
+        "deleted": bool(unavailable),
+        "reply": {"id": message.reply_id, "text": "Message deleted" if (message.reply.deleted_at or message.reply.is_hidden) else message.reply.text[:150]} if message.reply and not unavailable else None,
+        "pin": {"id": pin.pk, "title": pin.title, "thumbnail": pin.thumbnail.url if pin.thumbnail else pin.image.url} if pin and not pin.is_hidden and pin.owner.is_active and not unavailable else None,
+        "attachment": {"id": attachment.pk, "url": f"/api/chat/attachments/{attachment.pk}/", "width": attachment.width, "height": attachment.height} if attachment and not unavailable else None,
+        "reactions": [{"emoji": reaction.emoji, "user_id": reaction.user_id} for reaction in message.reactions.all()] if not unavailable else [],
     }
 
 

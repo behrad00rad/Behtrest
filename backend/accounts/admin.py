@@ -9,7 +9,7 @@ class ProfileInline(admin.StackedInline):
 
 
 @admin.register(User)
-class BintrestUserAdmin(UserAdmin):
+class BehtrestUserAdmin(UserAdmin):
     inlines = [ProfileInline]
     list_display = ("username", "email", "is_staff", "is_active", "date_joined")
     add_fieldsets = UserAdmin.add_fieldsets + ((None, {"fields": ("email",)}),)

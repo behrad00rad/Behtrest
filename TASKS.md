@@ -1,4 +1,4 @@
-# Bintrest V2 task plan
+# Behtrest V2 task plan
 
 Status: tasks 1–9 completed on October 9, 2026. Task 11's deployment candidate is prepared; container runtime verification remains pending. Task 10 remains deferred. Tasks 9 and 11 were explicitly approved. See docs/VERIFICATION.md for evidence.
 
@@ -156,13 +156,20 @@ Draft text and retry metadata are stored in the current browser tab and cleared 
 
 Restored rounded corners at the user's request: 10px controls and 14px images, panels, and message bubbles. Replaced the muted charcoal/indigo palette with deep navy backgrounds and saturated blue actions while retaining contrast-based separation.
 
-- Following users and a following feed.
-- Reporting/moderation before opening registration broadly.
-- Notifications and collaborative boards.
+- Collaborative boards.
 - Personal notes on saves and drag-and-drop organization.
 - Related posts by tag, color browsing, and duplicate-image detection.
 - Optional automatic tagging.
 - Complex recommendations only if usage justifies them.
+
+## Community improvements 3, 5, 6 (approved October 10, 2026)
+
+- [x] 3. Reporting, a permission-checked queue, reversible content/account decisions, and decision history.
+- [x] 5. Follows, follower/following lists, and a paginated following feed respecting blocks.
+- [x] 6. Activity notifications, unread controls, preferences, and private-save/block safeguards.
+- [x] Rename the current product to Behtrest while preserving original source/history and browser draft/environment compatibility.
+
+See `docs/COMMUNITY.md` for behavior and moderator setup and `docs/VERIFICATION.md` for checks.
 
 ## Review checkpoint
 

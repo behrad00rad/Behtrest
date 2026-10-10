@@ -1,5 +1,7 @@
 # Portable deployment candidate
 
+The current product and environment examples use Behtrest / `BEHTREST_*`. Django also accepts legacy `BINTREST_*` variables when their new equivalents are absent. For an existing Compose deployment, retain its original project name with `docker compose -p bintrest ...` so the same named volumes are reused; do not remove or silently replace existing volumes when adopting the new name. Copy the current environment example and transfer existing values before upgrading, including the domain used by Compose/Caddy. The GitHub repository URL and preserved V1 history retain their original names.
+
 Prepared October 9, 2026. Target: a small Linux server running Docker Engine and Compose, one hostname, one Django service, SQLite, and local persistent media. The user selected a portable Docker setup. No server, DNS record, account, or public site has been provisioned. Legacy import is task 10 and remains deferred.
 
 Local preflight validates Django production settings and Compose syntax. The local Docker engine is unavailable, so container builds and HTTPS smoke checks must pass in the supplied CI job or on a Docker host before publishing this candidate.
@@ -16,15 +18,15 @@ Browser → HTTPS Caddy → /api and /admin → Uvicorn/ASGI → Django → SQLi
 
 Only Caddy publishes ports. Django runs as UID/GID 10001 with a read-only application filesystem and a private port. Redis has no published port and stores temporary events/presence; messages remain durable in SQLite. Use one ASGI worker for this small-host SQLite setup. Vite is used only to build the frontend; the production container serves its compiled files.
 
-Compose volumes under the default project name `bintrest`:
+Compose volumes under the default project name `behtrest`:
 
 | Volume | Purpose |
 | --- | --- |
-| `bintrest_data` | `/data/db.sqlite3`, `/data/media`, `/data/private_media`; only `/data/media` is publicly served |
-| `bintrest_static` | Collected admin assets; rebuilt with each release |
-| `bintrest_backups` | Verified database/media ZIP archives; also copy them off the server |
-| `bintrest_caddy_data` | TLS certificate state |
-| `bintrest_caddy_config` | Caddy runtime configuration |
+| `behtrest_data` | `/data/db.sqlite3`, `/data/media`, `/data/private_media`; only `/data/media` is publicly served |
+| `behtrest_static` | Collected admin assets; rebuilt with each release |
+| `behtrest_backups` | Verified database/media ZIP archives; also copy them off the server |
+| `behtrest_caddy_data` | TLS certificate state |
+| `behtrest_caddy_config` | Caddy runtime configuration |
 
 SQLite and filesystem media suit this initial single-host target. Use one Gunicorn worker with four threads. Watch write contention, disk growth, and latency; a larger deployment should introduce PostgreSQL and object storage through a separate migration. Do not run multiple hosts against this SQLite file or place it on a network filesystem.
 
@@ -35,14 +37,14 @@ On the Linux host, install Docker Engine/Compose from the official vendor instru
 From the repository root, create a separate production environment:
 
 ```sh
-python3 scripts/setup_deploy.py --domain bintrest.example.com --email-host smtp.example.com --from-email 'Bintrest <hello@example.com>'
+python3 scripts/setup_deploy.py --domain behtrest.example.com --email-host smtp.example.com --from-email 'Behtrest <hello@example.com>'
 ```
 
 Replace the example domain/sender with yours, then edit ignored `deploy/.env` to set SMTP credentials. The script generates a fresh random secret and refuses to overwrite an existing file. Keep this file outside Git and back it up separately with restricted access. Never use the development secret in production.
 
 | Setting | Purpose |
 | --- | --- |
-| `BINTREST_DOMAIN` | Single hostname, without scheme, path, or port |
+| `BEHTREST_DOMAIN` | Single hostname, without scheme, path, or port |
 | `FRONTEND_ORIGIN` | Matching HTTPS origin used for reset links and CSRF |
 | `DJANGO_SECRET_KEY` | Random secret of at least 50 characters |
 | `EMAIL_HOST`, `EMAIL_PORT` | SMTP delivery host; port 587 by default |
@@ -69,7 +71,7 @@ Visit your HTTPS domain and register a new V2 account. Check `/admin/`, request 
 
 Production forces HTTPS and uses secure HTTP-only session/CSRF cookies, explicit allowed hosts, a matching trusted origin, MIME sniffing protection, frame denial, a referrer policy, and a frontend content security policy. Django and Caddy set one-year HSTS for the selected hostname. Subdomains and preload are deliberately excluded; Django's `security.W005` and `security.W021` checks are silenced with an explanatory comment because this configuration does not claim control of other hostnames or make a preload commitment.
 
-The backend's proxy headers are trusted only within this private Docker topology. Caddy overwrites `X-Forwarded-Proto` and `X-Bintrest-Client-IP`; validated client IPs keep API rate limits separate per client. Never publish the Django port, accept this header directly from the internet, or put another proxy/CDN in front without revisiting this trust boundary. Django admin login has a separate permission system; add appropriate edge throttling if the admin is exposed broadly.
+The backend's proxy headers are trusted only within this private Docker topology. Caddy overwrites `X-Forwarded-Proto` and `X-Behtrest-Client-IP`; validated client IPs keep API rate limits separate per client. Never publish the Django port, accept this header directly from the internet, or put another proxy/CDN in front without revisiting this trust boundary. Django admin login has a separate permission system; add appropriate edge throttling if the admin is exposed broadly.
 
 Uploads are re-encoded as still WebP files; both services limit request sizes. Caddy serves images as files and never executes uploads. Private boards hide collections, while pins and their media remain public. Source links open in a separate tab without opener access. Missing API routes return JSON errors rather than the SPA; deep frontend links use the SPA fallback.
 
@@ -83,11 +85,11 @@ Stop writers to capture a consistent database/media pair. In `deploy/`, choose a
 
 ```sh
 docker compose stop web backend
-docker compose run --rm --no-deps backend python manage.py backup_v2 /backups/bintrest-2026-10-09.zip --offline
-docker compose run --rm --no-deps backend python manage.py verify_backup /backups/bintrest-2026-10-09.zip
+docker compose run --rm --no-deps backend python manage.py backup_v2 /backups/behtrest-2026-10-09.zip --offline
+docker compose run --rm --no-deps backend python manage.py verify_backup /backups/behtrest-2026-10-09.zip
 docker compose up -d --wait
-docker compose cp backend:/backups/bintrest-2026-10-09.zip /srv/secure-backups/bintrest-2026-10-09.zip
-chmod 600 /srv/secure-backups/bintrest-2026-10-09.zip
+docker compose cp backend:/backups/behtrest-2026-10-09.zip /srv/secure-backups/behtrest-2026-10-09.zip
+chmod 600 /srv/secure-backups/behtrest-2026-10-09.zip
 ```
 
 Create `/srv/secure-backups` with restricted permissions first. Record the release commit alongside each archive and transfer an encrypted copy to your backup destination. Check each command's exit status; if a backup fails, restart the original services and investigate before an upgrade. `--offline` acknowledges that writers are stopped; the command cannot detect services running elsewhere.
@@ -99,12 +101,12 @@ The backup uses SQLite's snapshot API, then validates database integrity, foreig
 Test restore at least monthly and before relying on the first production backup. On the same host, use separate fresh volumes and the original backup volume:
 
 ```sh
-docker compose -p bintrest-restore run --rm --no-deps -v bintrest_backups:/restore-input:ro backend python manage.py verify_backup /restore-input/bintrest-2026-10-09.zip --restore-to /data
+docker compose -p behtrest-restore run --rm --no-deps -v behtrest_backups:/restore-input:ro backend python manage.py verify_backup /restore-input/behtrest-2026-10-09.zip --restore-to /data
 ```
 
-This checks and restores into the new `bintrest-restore_data` volume. Restore refuses existing data; a fresh volume with an empty `media/` directory is allowed. Traversal names, duplicate members, and changed checksums are rejected. It never restores over the live database.
+This checks and restores into the new `behtrest-restore_data` volume. Restore refuses existing data; a fresh volume with an empty `media/` directory is allowed. Traversal names, duplicate members, and changed checksums are rejected. It never restores over the live database.
 
-For a full recovery drill, run the matching Git revision on a separate hostname or loopback ports with a separate environment file (`BINTREST_ENV_FILE`), collect static assets, start that project, then verify login, images, comments, and boards. Inspect restored counts without exposing personal records. Do not start a second project with the production ports/domain or copy a backup into an actively written volume. Adopt the verified restored volume only during an explicit cutover with the original services stopped. A rollback must restore the matching database/media backup if migrations changed the schema; checking out older source alone is insufficient.
+For a full recovery drill, run the matching Git revision on a separate hostname or loopback ports with a separate environment file (`BEHTREST_ENV_FILE`), collect static assets, start that project, then verify login, images, comments, and boards. Inspect restored counts without exposing personal records. Do not start a second project with the production ports/domain or copy a backup into an actively written volume. Adopt the verified restored volume only during an explicit cutover with the original services stopped. A rollback must restore the matching database/media backup if migrations changed the schema; checking out older source alone is insufficient.
 
 ## Operations and upgrades
 

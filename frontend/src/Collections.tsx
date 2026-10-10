@@ -24,6 +24,7 @@ import type { User } from "./api";
 import { useAuth } from "./auth";
 import { useDebouncedValue, usePage, useResource } from "./hooks";
 import { SearchField, ShareControl } from "./ProductUI";
+import { FollowControls } from "./Community";
 import type { Board, Post, Profile } from "./types";
 import {
   Avatar,
@@ -388,6 +389,7 @@ export function ProfilePage() {
           </button>
         )}
       </section>
+      <FollowControls profile={profile} reload={resource.reload} />
       <div className="tabs profile-tabs">
         <button
           className={tab === "pins" ? "active" : ""}

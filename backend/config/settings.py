@@ -6,6 +6,10 @@ from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
+# Existing installations may still use the former environment prefix.
+for env_name, env_value in list(os.environ.items()):
+    if env_name.startswith("BINTREST_"):
+        os.environ.setdefault("BEHTREST_" + env_name[len("BINTREST_"):], env_value)
 SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "")
 if not SECRET_KEY:
     raise ImproperlyConfigured("Run python scripts/setup_backend.py to create backend/.env first.")
@@ -60,7 +64,7 @@ MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
-DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "Bintrest <hello@localhost>")
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "Behtrest <hello@localhost>")
 PASSWORD_RESET_TIMEOUT = 3600
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = "Lax"

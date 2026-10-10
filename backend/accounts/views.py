@@ -15,6 +15,7 @@ from .forms import LoginForm, ProfileForm, RegistrationForm
 def serialize_user(user):
     return {
         "id": user.pk, "username": user.username, "email": user.email,
+        "can_moderate": user.is_staff and user.has_perm("collection.review_reports"),
         "profile": {"display_name": user.profile.display_name, "bio": user.profile.bio, "avatar": user.profile.avatar.url if user.profile.avatar else None},
     }
 

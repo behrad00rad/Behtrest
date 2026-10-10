@@ -10,10 +10,12 @@ const memory = new Map<string, ChatDraft>();
 export const draftKey = (
   user: number | undefined,
   conversation: string | undefined,
-) => `bintrest:chat-draft:${user}:${conversation}`;
+) => `behtrest:chat-draft:${user}:${conversation}`;
 export function readDraft(key: string): ChatDraft {
   try {
-    const raw = sessionStorage.getItem(key);
+    const raw =
+      sessionStorage.getItem(key) ||
+      sessionStorage.getItem(key.replace("behtrest:", "bintrest:"));
     if (raw) {
       const value = JSON.parse(raw);
       if (typeof value.text === "string" && value.text.length <= 4000)
@@ -36,18 +38,23 @@ export function clearDraft(key: string) {
   memory.delete(key);
   try {
     sessionStorage.removeItem(key);
+    sessionStorage.removeItem(key.replace("behtrest:", "bintrest:"));
   } catch {
     /* The memory copy has been cleared. */
   }
 }
 
 export function clearUserDrafts(user: number) {
-  const prefix = `bintrest:chat-draft:${user}:`;
+  const prefix = `behtrest:chat-draft:${user}:`;
   for (const key of memory.keys())
     if (key.startsWith(prefix)) memory.delete(key);
   try {
     for (const key of Object.keys(sessionStorage))
-      if (key.startsWith(prefix)) sessionStorage.removeItem(key);
+      if (
+        key.startsWith(prefix) ||
+        key.startsWith(prefix.replace("behtrest:", "bintrest:"))
+      )
+        sessionStorage.removeItem(key);
   } catch {
     /* The memory copies have been cleared. */
   }

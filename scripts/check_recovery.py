@@ -10,10 +10,10 @@ from contextlib import closing
 
 if __name__ == "__main__":
     sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
-    with tempfile.TemporaryDirectory(prefix="bintrest-recovery-drill-") as directory:
+    with tempfile.TemporaryDirectory(prefix="behtrest-recovery-drill-") as directory:
         root = Path(directory)
         os.environ["DJANGO_SETTINGS_MODULE"] = "config.e2e_settings"
-        os.environ["BINTREST_E2E_DIR"] = directory
+        os.environ["BEHTREST_E2E_DIR"] = directory
         os.environ["DJANGO_SECRET_KEY"] = secrets.token_urlsafe(64)
         os.environ["DJANGO_DEBUG"] = "1"
         import django

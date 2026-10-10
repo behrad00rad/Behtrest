@@ -10,8 +10,8 @@ class ProxyClientAddress:
         self.get_response = get_response
 
     def __call__(self, request):
-        if getattr(settings, "BINTREST_TRUST_PROXY", False):
-            value = request.META.get("HTTP_X_BINTREST_CLIENT_IP")
+        if getattr(settings, "BEHTREST_TRUST_PROXY", False):
+            value = request.META.get("HTTP_X_BEHTREST_CLIENT_IP")
             if value:
                 try:
                     request.META["REMOTE_ADDR"] = str(ipaddress.ip_address(value))

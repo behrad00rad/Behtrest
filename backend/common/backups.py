@@ -54,14 +54,14 @@ def create_backup(database_path, media_root, output, private_root=None):
             raise ValueError("Media symlinks cannot be backed up.")
         if path.is_file():
             media.append((path, "media/" + path.relative_to(media_root).as_posix()))
-    with tempfile.TemporaryDirectory(prefix="bintrest-backup-") as temporary:
+    with tempfile.TemporaryDirectory(prefix="behtrest-backup-") as temporary:
         snapshot = Path(temporary) / "db.sqlite3"
         with closing(sqlite3.connect(database_path.as_uri() + "?mode=ro", uri=True)) as source, closing(sqlite3.connect(snapshot)) as destination:
             source.backup(destination)
         check_database(snapshot, {name for _, name in media})
         entries = [(snapshot, "db.sqlite3"), *media]
         manifest = {"format": 2 if private_root else 1, "created_at": datetime.now(timezone.utc).isoformat(), "files": {}}
-        descriptor, partial = tempfile.mkstemp(prefix=".bintrest-", suffix=".partial", dir=output.parent)
+        descriptor, partial = tempfile.mkstemp(prefix=".behtrest-", suffix=".partial", dir=output.parent)
         os.close(descriptor)
         try:
             with ZipFile(partial, "w", compression=ZIP_DEFLATED) as archive:
@@ -97,7 +97,7 @@ def verify_backup(path):
             with archive.open(name) as stream:
                 if digest(stream) != checksum:
                     raise ValueError("Backup checksum mismatch.")
-        with tempfile.TemporaryDirectory(prefix="bintrest-restore-check-") as temporary:
+        with tempfile.TemporaryDirectory(prefix="behtrest-restore-check-") as temporary:
             snapshot = Path(temporary) / "db.sqlite3"
             with archive.open("db.sqlite3") as source, snapshot.open("wb") as destination:
                 import shutil

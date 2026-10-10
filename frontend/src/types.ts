@@ -36,6 +36,9 @@ export type Board = {
   post_count: number;
 };
 export type Profile = Author & {
+  follower_count: number;
+  following_count: number;
+  is_following: boolean;
   bio: string;
   post_count: number;
   board_count: number;

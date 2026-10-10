@@ -24,6 +24,7 @@ test("two people: requests, live messages, image, edit, reaction, group and bloc
   page,
   browser,
 }, info) => {
+  test.setTimeout(90000);
   const peerContext = await browser.newContext({
     ...info.project.use,
     baseURL: "http://127.0.0.1:5174",

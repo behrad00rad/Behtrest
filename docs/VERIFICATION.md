@@ -1,5 +1,17 @@
 # Tasks 1–4 verification
 
+## Community features and Behtrest rename — October 10, 2026
+
+- Implemented roadmap items 3, 5, and 6: reports and moderation, following and a following feed, and activity notifications/preferences. The current app, package/config names, email labels, operating docs, and deployment examples use Behtrest. Original source/README and the actual GitHub repository URL retain their history. Existing browser drafts and legacy environment variables have compatibility handling.
+- The full backend suite passed with **84 tests**. Fourteen community tests cover follow idempotence/counts, self-follow rejection, CSRF/ownership, viewer-scoped pagination, blocks, notification preferences and private-save safeguards, reporting evidence/deduplication, staff permission checks, hiding/restoring pins/comments/messages, private attachment access, audit history, and suspension/session revocation.
+- All **six desktop/mobile journeys** pass across the final full run of the four existing account/collection and messaging journeys and the focused run of both community journeys. New coverage checks following/follower lists, following-feed contents, notifications and preferences, marking activity read, report submission, ordinary-user rejection, moderator hide/restore with history, and unfollowing. Axe A/AA and document overflow checks pass on tested following/activity/moderation screens.
+- Browser checks found and corrected delayed preference checkbox feedback and the moderation select's accessible name. Preference changes now update immediately, disable while saving, and roll back on errors. Longer chat journeys retain normal five-second assertions and use a 90-second overall journey budget.
+- Final frontend formatting and TypeScript/Vite production build passed. Django system checks, migration drift, Python compilation, and diff whitespace checks passed. Desktop/mobile moderation screenshots were visually reviewed.
+- A disposable backup/restore drill passed after the schema/name changes: 24 synthetic pins, 4 boards, 24 saves, and 48 media files recovered. Before applying the additive community migrations to normal V2 preview data, a verified 52-file backup was written to ignored `backend/backups/pre-community.zip`. The original database/source remain untouched.
+- Local preview runs the new API and reports `behtrest` in its health response. Moderator access requires staff status plus `collection.review_reports`; setup and behavior are documented in [COMMUNITY.md](COMMUNITY.md). No public deployment or remote repository rename was performed.
+
+## Earlier verification
+
 Verified October 9, 2026 on Windows, Python 3.12, and Node 24.21.0.
 
 ## Automated checks

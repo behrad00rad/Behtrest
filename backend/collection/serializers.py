@@ -16,10 +16,10 @@ def comment_data(comment):
 
 def board_data(board):
     cover = board.cover
-    if cover is None or not cover.owner.is_active or not board.saved_posts.filter(post=cover).exists():
-        saved = board.saved_posts.filter(post__owner__is_active=True).select_related("post").order_by("-created_at", "-id").first()
+    if cover is None or cover.is_hidden or not cover.owner.is_active or not board.saved_posts.filter(post=cover).exists():
+        saved = board.saved_posts.filter(post__owner__is_active=True, post__is_hidden=False).select_related("post").order_by("-created_at", "-id").first()
         cover = saved.post if saved else None
     return {"id": board.pk, "name": board.name, "description": board.description, "is_private": board.is_private,
             "owner": board.owner.username, "cover_post_id": cover.pk if cover else None,
             "cover": (cover.thumbnail.url if cover.thumbnail else cover.image.url) if cover else None,
-            "post_count": board.saved_posts.filter(post__owner__is_active=True).count()}
+            "post_count": board.saved_posts.filter(post__owner__is_active=True, post__is_hidden=False).count()}

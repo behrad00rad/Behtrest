@@ -10,17 +10,17 @@ from .settings import *  # noqa: F403
 DEBUG = False
 if len(SECRET_KEY) < 50 or SECRET_KEY.startswith("django-insecure-"):  # noqa: F405
     raise ImproperlyConfigured("Production needs a random DJANGO_SECRET_KEY of at least 50 characters.")
-domain = os.environ.get("BINTREST_DOMAIN", "").strip().lower()
+domain = os.environ.get("BEHTREST_DOMAIN", "").strip().lower()
 origin = os.environ.get("FRONTEND_ORIGIN", "")
 parsed = urlsplit(origin)
 if not domain or len(domain) > 253 or any(not re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", label) for label in domain.split(".")):
-    raise ImproperlyConfigured("BINTREST_DOMAIN must be a single hostname without a port.")
+    raise ImproperlyConfigured("BEHTREST_DOMAIN must be a single hostname without a port.")
 if parsed.scheme != "https" or parsed.hostname != domain or parsed.path or parsed.query or parsed.fragment or parsed.username:
-    raise ImproperlyConfigured("FRONTEND_ORIGIN must be the HTTPS origin for BINTREST_DOMAIN.")
+    raise ImproperlyConfigured("FRONTEND_ORIGIN must be the HTTPS origin for BEHTREST_DOMAIN.")
 FRONTEND_ORIGIN = origin
 ALLOWED_HOSTS = [domain, "localhost", "127.0.0.1"]
 CSRF_TRUSTED_ORIGINS = [origin]
-DATA_ROOT = Path(os.environ.get("BINTREST_DATA_ROOT", "/data"))
+DATA_ROOT = Path(os.environ.get("BEHTREST_DATA_ROOT", "/data"))
 DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": DATA_ROOT / "db.sqlite3", "OPTIONS": {"timeout": 20, "transaction_mode": "IMMEDIATE"}}}
 MEDIA_ROOT = DATA_ROOT / "media"
 PRIVATE_MEDIA_ROOT = DATA_ROOT / "private_media"
@@ -28,7 +28,7 @@ CHAT_ALLOWED_ORIGINS = [origin]
 REDIS_URL = os.environ.get("REDIS_URL", "redis://redis:6379/0")
 CHANNEL_LAYERS = {"default": {"BACKEND": "channels_redis.core.RedisChannelLayer", "CONFIG": {"hosts": [REDIS_URL]}}}
 CACHES = {"default": {"BACKEND": "django.core.cache.backends.redis.RedisCache", "LOCATION": REDIS_URL}}
-STATIC_ROOT = Path(os.environ.get("BINTREST_STATIC_ROOT", "/static"))
+STATIC_ROOT = Path(os.environ.get("BEHTREST_STATIC_ROOT", "/static"))
 SESSION_COOKIE_SECURE = True
 CSRF_COOKIE_SECURE = True
 SECURE_SSL_REDIRECT = True
@@ -40,7 +40,7 @@ SECURE_HSTS_PRELOAD = False
 # This deployment owns one hostname, not every subdomain or a preload commitment.
 SILENCED_SYSTEM_CHECKS = ["security.W005", "security.W021"]
 SECURE_REFERRER_POLICY = "same-origin"
-BINTREST_TRUST_PROXY = True
+BEHTREST_TRUST_PROXY = True
 MIDDLEWARE = ["common.middleware.ProxyClientAddress", *MIDDLEWARE]  # noqa: F405
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = os.environ.get("EMAIL_HOST", "")

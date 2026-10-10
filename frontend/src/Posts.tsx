@@ -25,6 +25,7 @@ import { request, upload } from "./api";
 import { useAuth } from "./auth";
 import { usePage, useResource } from "./hooks";
 import { SearchField, ShareControl } from "./ProductUI";
+import { ReportButton } from "./Community";
 import type { Author, Comment, Post } from "./types";
 import {
   Avatar,
@@ -38,6 +39,7 @@ import {
 export function Explore() {
   const [params, setParams] = useSearchParams();
   const tag = params.get("tag") || "";
+  const following = params.get("feed") === "following";
   const tags = useResource<{ items: string[] }>("/tags/");
   return (
     <main className="collection-page explore-page">
@@ -53,13 +55,31 @@ export function Explore() {
           Share a pin
         </Link>
       </div>
+      <div className="tabs feed-tabs">
+        <button
+          className={!following ? "active" : ""}
+          aria-pressed={!following}
+          onClick={() => setParams(tag ? { tag } : {})}
+        >
+          Discover
+        </button>
+        <button
+          className={following ? "active" : ""}
+          aria-pressed={following}
+          onClick={() =>
+            setParams({ ...(tag ? { tag } : {}), feed: "following" })
+          }
+        >
+          Following
+        </button>
+      </div>
       <div className="filter-bar">
         <span className="filter-label">Browse tags</span>
         <div className="filter-chips" aria-label="Filter by tag">
           <button
             className={!tag ? "active" : ""}
             aria-pressed={!tag}
-            onClick={() => setParams({})}
+            onClick={() => setParams(following ? { feed: "following" } : {})}
           >
             All pins
           </button>
@@ -68,7 +88,12 @@ export function Explore() {
               key={item}
               className={tag === item ? "active" : ""}
               aria-pressed={tag === item}
-              onClick={() => setParams({ tag: item })}
+              onClick={() =>
+                setParams({
+                  tag: item,
+                  ...(following ? { feed: "following" } : {}),
+                })
+              }
             >
               {item.replaceAll("-", " ")}
             </button>
@@ -81,8 +106,26 @@ export function Explore() {
         </div>
       </div>
       <PostGrid
-        endpoint={`/feed/${tag ? `?tag=${encodeURIComponent(tag)}` : ""}`}
-        empty={tag ? "No pins with this tag yet." : "The first idea is yours."}
+        endpoint={`/feed/?following=${following ? 1 : 0}${tag ? `&tag=${encodeURIComponent(tag)}` : ""}`}
+        empty={
+          following
+            ? "Your following feed is quiet"
+            : tag
+              ? "No pins with this tag yet."
+              : "The first idea is yours."
+        }
+        emptyDescription={
+          following
+            ? "Follow people from their profiles to see their pins here."
+            : undefined
+        }
+        emptyAction={
+          following ? (
+            <Link className="secondary-button" to="/search?kind=people">
+              Find people
+            </Link>
+          ) : undefined
+        }
       />
     </main>
   );
@@ -583,6 +626,13 @@ function Comments({ postId }: { postId: number }) {
                 </time>
               </div>
               <p>{comment.text}</p>
+              {user?.id !== comment.author.id && (
+                <ReportButton
+                  kind="comment"
+                  target={comment.id}
+                  label="Report comment"
+                />
+              )}
               {user?.id === comment.author.id && (
                 <details className="comment-actions">
                   <summary aria-label="Comment actions">
@@ -862,6 +912,9 @@ export function PostDetail() {
                 </button>
               </div>
             </details>
+          )}
+          {post.owner.id !== user?.id && (
+            <ReportButton kind="post" target={post.id} label="Report pin" />
           )}
           <Comments key={post.id} postId={post.id} />
         </div>

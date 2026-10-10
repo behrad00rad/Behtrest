@@ -27,6 +27,7 @@ import { useAuth } from "./auth";
 import AccountForm from "./AccountForm";
 import Chat from "./Chat";
 import { useChat } from "./ChatContext";
+import { ActivityNav, Notifications, Moderation } from "./Community";
 
 function Header() {
   const chat = useChat();
@@ -59,8 +60,8 @@ function Header() {
   return (
     <>
       <header className="site-header">
-        <Link className="wordmark" to="/" aria-label="Bintrest home">
-          <span className="brand-mark">b</span>bintrest
+        <Link className="wordmark" to="/" aria-label="Behtrest home">
+          <span className="brand-mark">b</span>behtrest
           <span className="brand-dot">.</span>
         </Link>
         {auth.user && (
@@ -78,6 +79,7 @@ function Header() {
             </button>
           </form>
         )}
+        {auth.user && <ActivityNav />}
         <nav aria-label="Main navigation">
           <Link className="story-link" to="/story">
             Our story <ArrowUpRight size={14} />
@@ -145,6 +147,10 @@ function Header() {
               />
             </summary>
             <div>
+              <Link to="/notifications">Notifications</Link>
+              {auth.user.can_moderate && (
+                <Link to="/moderation">Moderation</Link>
+              )}
               <Link to={`/u/${auth.user.username}`}>Your profile</Link>
               <Link to="/story">Our story</Link>
               <button disabled={busy} onClick={() => void signOut()}>
@@ -214,7 +220,7 @@ function Story() {
       </p>
       <div className="story-body">
         <p>
-          I’m Amirhossein Ghazanfari Rad. Bintrest began as my CS50x final
+          I’m Amirhossein Ghazanfari Rad. Behtrest began as my CS50x final
           project: a place to share pictures, leave comments, and learn how the
           pieces of a web application fit together.
         </p>
@@ -285,6 +291,22 @@ export default function App() {
           </div>
         ) : (
           <Routes>
+            <Route
+              path="/notifications"
+              element={
+                <Protected>
+                  <Notifications />
+                </Protected>
+              }
+            />
+            <Route
+              path="/moderation"
+              element={
+                <Protected>
+                  <Moderation />
+                </Protected>
+              }
+            />
             <Route
               path="/messages"
               element={

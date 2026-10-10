@@ -1,4 +1,5 @@
 export type User = {
+  can_moderate: boolean;
   id: number;
   username: string;
   email: string;

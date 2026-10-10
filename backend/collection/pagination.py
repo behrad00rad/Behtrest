@@ -23,7 +23,7 @@ def paginate(queryset, request, scope, *, date_field="created_at", ascending=Fal
         try:
             if len(cursor) > 1500:
                 raise ValueError
-            data = signing.loads(cursor, salt="bintrest.cursor", max_age=86400)
+            data = signing.loads(cursor, salt="behtrest.cursor", max_age=86400)
             snapshot = parse_datetime(data["snapshot"])
             date = parse_datetime(data["date"])
             pk = data["id"]
@@ -41,5 +41,5 @@ def paginate(queryset, request, scope, *, date_field="created_at", ascending=Fal
     next_cursor = None
     if has_more:
         last = items[-1]
-        next_cursor = signing.dumps({"snapshot": snapshot.isoformat(), "date": getattr(last, date_field).isoformat(), "id": last.pk, "scope": scope_hash}, salt="bintrest.cursor", compress=True)
+        next_cursor = signing.dumps({"snapshot": snapshot.isoformat(), "date": getattr(last, date_field).isoformat(), "id": last.pk, "scope": scope_hash}, salt="behtrest.cursor", compress=True)
     return items, next_cursor

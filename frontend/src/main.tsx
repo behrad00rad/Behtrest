@@ -8,6 +8,7 @@ import "./styles.css";
 import "./messenger.css";
 import "./product.css";
 import "./minimal.css";
+import "./community.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

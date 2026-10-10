@@ -1,5 +1,7 @@
 # V2 API
 
+Following, activity notifications, reports, and moderation endpoints are documented in [COMMUNITY.md](COMMUNITY.md).
+
 All paths below are under `/api/`. Requests and responses use JSON, except image uploads which use multipart form data. Success: `{"data": ...}`. Errors: `{"error":{"code":"...","message":"...","fields":{"field":["message"]}}}`; `fields` is included only when applicable.
 
 ## Browser authentication
@@ -73,7 +75,7 @@ Counters live in the database, use atomic increments, and survive session change
 - Login and reset confirmation: 10 per 5 minutes per IP; login also limits by username across IPs.
 - Other write endpoints: 30 per minute per IP, per endpoint.
 
-Development trusts only `REMOTE_ADDR`. The supplied private Docker topology overwrites and validates `X-Bintrest-Client-IP` at Caddy before assigning the backend client address. Never expose its Django port directly or trust a browser-supplied proxy header. Additional proxies require a reviewed address strategy. Clean expired counters with `python manage.py cleanup_rate_limits`.
+Development trusts only `REMOTE_ADDR`. The supplied private Docker topology overwrites and validates `X-Behtrest-Client-IP` at Caddy before assigning the backend client address. Never expose its Django port directly or trust a browser-supplied proxy header. Additional proxies require a reviewed address strategy. Clean expired counters with `python manage.py cleanup_rate_limits`.
 
 The Django admin uses Django's staff/permission system. It is a trusted administration interface, separate from owner-only public API access.
 

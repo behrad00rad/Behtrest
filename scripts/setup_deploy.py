@@ -16,7 +16,7 @@ def main():
     if any(character in options.from_email for character in '\r\n"$'):
         parser.error("Invalid sender email.")
     target = Path(__file__).resolve().parents[1] / "deploy" / ".env"
-    content = f'''BINTREST_DOMAIN={options.domain}
+    content = f'''BEHTREST_DOMAIN={options.domain}
 FRONTEND_ORIGIN=https://{options.domain}
 DJANGO_SECRET_KEY={secrets.token_urlsafe(64)}
 EMAIL_HOST={options.email_host}

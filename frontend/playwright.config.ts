@@ -7,7 +7,7 @@ const localPython = resolve(
   process.platform === "win32" ? "Scripts/python.exe" : "bin/python",
 );
 const python =
-  process.env.BINTREST_PYTHON ||
+  process.env.BEHTREST_PYTHON ||
   (existsSync(localPython) ? localPython : "python");
 
 export default defineConfig({
@@ -19,7 +19,7 @@ export default defineConfig({
   reporter: [["list"], ["html", { open: "never" }]],
   use: {
     baseURL: "http://127.0.0.1:5174",
-    channel: process.env.BINTREST_BROWSER_CHANNEL,
+    channel: process.env.BEHTREST_BROWSER_CHANNEL,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },

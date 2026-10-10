@@ -1,4 +1,4 @@
-# Bintrest
+# Behtrest
 
 A blue, dark-themed Pinterest-inspired app, originally built by Amirhossein Ghazanfari Rad at age 13 as a CS50x final project.
 
@@ -12,6 +12,8 @@ Connecting React, a Python API, a database, accounts, image uploads, and comment
 
 ## History
 
+- **October 10, 2026:** renamed the current app to **Behtrest**. The original project was named Bintrest; its original README and source remain preserved.
+- **October 10, 2026, community:** added follows and a following feed, activity preferences/unread controls, and a report queue with reversible moderation decisions and audit history.
 - **Original project:** built at age 13 for CS50x. The project folder references the 2022 course; the exact completion date has not been confirmed.
 - **October 9, 2026:** revisited the project, initialized a local Git repository, and planned a second version using Django and React.
 - **October 9, 2026, V2 foundation:** completed tasks 1–4: V1 reproduction, Django/React setup, data models, and secure account flows.
@@ -42,6 +44,8 @@ Implemented:
 - Automated desktop/mobile browser journeys and accessibility checks, plus CI for backend, frontend, and container smoke checks.
 - Direct and group messaging, requests, replies, reactions, edits/deletion, pin sharing, private image attachments, search, unread badges, mute/archive, block/report, typing, presence, and sent/delivered/read receipts.
 - Opt-in browser notifications, privacy preferences, UUID send retries, and reconnect/history synchronization.
+- Following, a following feed, follower lists, and activity notifications with unread controls and preferences.
+- Reports, permission-checked moderation, reversible hiding/suspension, and an audit trail. See [community behavior and moderator setup](docs/COMMUNITY.md).
 - A Docker/Caddy/Uvicorn/Redis deployment candidate, production configuration checks, database readiness, and verified V2 backup/restore commands including private chat images.
 
 Private boards hide their collections; the original pins remain public. Local development uses filesystem media storage. Retry failed deletions with `python backend/manage.py cleanup_media` using the project virtual environment.
@@ -107,7 +111,9 @@ npm run test:e2e
 
 Backend tests, Django checks, migration drift, frontend formatting/build, and desktop/mobile browser journeys cover the account/collection and two-person messaging flows. See the verification record for counts and results. Automated axe checks complement manual review.
 
-The browser runner creates a separate temporary V2 database/media directory and uses ports 8001/5174. It never reuses normal preview data. If the browser download is unavailable and Edge is installed, run `$env:BINTREST_BROWSER_CHANNEL='msedge'` before `npm run test:e2e`. CI uses bundled Chromium. See [verification details](docs/VERIFICATION.md) and [API conventions](docs/API.md).
+Community journeys also cover following, activity preferences, reporting, and moderator hide/restore decisions on desktop and mobile.
+
+The browser runner creates a separate temporary V2 database/media directory and uses ports 8001/5174. It never reuses normal preview data. If the browser download is unavailable and Edge is installed, run `$env:BEHTREST_BROWSER_CHANNEL='msedge'` before `npm run test:e2e`. CI uses bundled Chromium. See [verification details](docs/VERIFICATION.md) and [API conventions](docs/API.md).
 
 ![V2 inspiration feed](docs/screenshots/v2-verified-feed-desktop.png)
 

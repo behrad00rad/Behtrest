@@ -74,7 +74,7 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           m.id > (notified.get(data.conversation_id) || 0)
         ) {
           notified.set(data.conversation_id, m.id);
-          new Notification("Bintrest", {
+          new Notification("Behtrest", {
             body: "You have a new message.",
             tag: `chat-${data.conversation_id}`,
           });

@@ -47,6 +47,7 @@ Implemented:
 - Following, a following feed, follower lists, and activity notifications with unread controls and preferences.
 - Reports, permission-checked moderation, reversible hiding/suspension, and an audit trail. See [community behavior and moderator setup](docs/COMMUNITY.md).
 - Local background image screening for public pins and avatars, private previews, retries, and human review/appeals. See [setup and behavior](docs/IMAGE-MODERATION.md).
+- Invite-only signup with member referral links, configurable allowances, code revocation/replacement, and audited in-app administrator controls. See [referral settings](docs/REFERRALS.md).
 - A Docker/Caddy/Uvicorn/Redis deployment candidate, production configuration checks, database readiness, and verified V2 backup/restore commands including private chat images.
 
 Private boards hide their collections; the original pins remain public. Local development uses filesystem media storage. Retry failed deletions with `python backend/manage.py cleanup_media` using the project virtual environment.
@@ -188,11 +189,11 @@ Preserve the dark/blue identity while rebuilding the backend with Django and mod
 
 Use one backend and one frontend, same-origin session authentication with CSRF protection, and SQLite for initial development. Production storage choices will depend on deployment requirements.
 
-[V2 tasks](TASKS.md) describe the sequence, acceptance criteria, and deferred ideas. Tasks 1–9 are complete. Task 11's deployment candidate is prepared for review; container build/HTTPS verification must still run on an available Docker engine. Task 10's legacy import remains deferred. Nothing has been deployed.
+[V2 tasks](TASKS.md) describe the sequence, acceptance criteria, and deferred ideas. Tasks 1–9 are complete. Task 11's Docker deployment candidate passed Linux CI builds, HTTPS, Redis delivery, moderation processing, and restart/persistence checks on October 10, 2026. Task 10's legacy import remains deferred. Nothing has been publicly deployed.
 
 ### Deployment candidate
 
-The chosen target is a small Linux server using Docker, Caddy HTTPS, Gunicorn, persistent SQLite, and filesystem media. [Deployment instructions](docs/DEPLOYMENT.md) include environment generation, SMTP delivery, setup commands, backup/restore drills, monitoring, upgrades, and rollback. Docker Compose syntax and production Django checks passed locally; the container CI job is prepared but has not run remotely. Confirm its result before publishing.
+The chosen target is a small Linux server using Docker, Caddy HTTPS, Uvicorn, Redis, persistent SQLite, and filesystem media. [Deployment instructions](docs/DEPLOYMENT.md) include environment generation, SMTP delivery, setup commands, backup/restore drills, monitoring, upgrades, and rollback. The expanded container CI job passed remotely for commit `4813a43`; real hosting, DNS and SMTP delivery remain unconfigured.
 
 ## Acknowledgments
 

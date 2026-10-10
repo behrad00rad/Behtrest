@@ -1,6 +1,6 @@
 # Behtrest V2 task plan
 
-Status: tasks 1–9 completed on October 9, 2026. Task 11's deployment candidate is prepared; container runtime verification remains pending. Task 10 remains deferred. Tasks 9 and 11 were explicitly approved. See docs/VERIFICATION.md for evidence.
+Status: tasks 1–9 completed on October 9, 2026. Task 11's deployment candidate passed Linux container runtime verification on October 10, 2026. Task 10 remains deferred. Tasks 9 and 11 were explicitly approved. See docs/VERIFICATION.md for evidence. No public hosting has been provisioned.
 
 ## Preparation completed
 
@@ -112,7 +112,7 @@ Preserve `btrest/` as V1. Build V2 in new `backend/` and `frontend/` directories
 - [x] Document backups, restore checks, logging, and health checks.
 - [x] Update the README with verified setup, screenshots, architecture, and the V1-to-V2 story.
 - [x] Run available local checks and prepare a release candidate for review.
-- [ ] Run container builds and HTTPS smoke verification on an available Docker engine (CI job supplied; local engine unavailable). Confirm before publishing.
+- [x] Run container builds and HTTPS smoke verification on an available Docker engine (Linux CI passed; local engine unavailable).
 
 **Done when:** deployment instructions are concrete, checks pass, and recovery is documented. Publishing requires a deployment request.
 
@@ -190,10 +190,10 @@ See `docs/IMAGE-MODERATION.md` and `docs/VERIFICATION.md`. Existing public uploa
 - [x] Add worker heartbeat health and local labeled-corpus evaluation tools.
 - [x] Verify backend and desktop/mobile referral journeys, recovery, builds and migrations.
 - [x] Diagnose the CI Redis ownership failure and run Redis as its unprivileged image user.
-- [ ] Complete Linux container HTTPS/Redis/worker-restart/persistence CI verification after the fix.
+- [x] Complete Linux container HTTPS/Redis/worker-restart/persistence CI verification after the fix (commit `4813a43`).
 
 Representative nudity calibration samples are not bundled. Detection thresholds remain unchanged pending actual validation data. Private chat screening, retroactive scans, SMTP delivery and legacy import remain separate work.
 
 ## Review checkpoint
 
-The user approved tasks 1–9 and 11. Task 9 is complete; task 11 is prepared with container runtime verification still pending. Task 10 is deferred. No public deployment is authorized. The original completion year remains unconfirmed; do not turn the 2022 course-folder reference into a claimed completion date.
+The user approved tasks 1–9 and 11. Task 9 is complete; task 11's container candidate passed Linux runtime checks. Task 10 is deferred. No public deployment is authorized. The original completion year remains unconfirmed; do not turn the 2022 course-folder reference into a claimed completion date.

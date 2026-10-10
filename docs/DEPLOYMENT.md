@@ -4,7 +4,7 @@ The current product and environment examples use Behtrest / `BEHTREST_*`. Django
 
 Prepared October 9, 2026. Target: a small Linux server running Docker Engine and Compose, one hostname, one Django service, SQLite, and local persistent media. The user selected a portable Docker setup. No server, DNS record, account, or public site has been provisioned. Legacy import is task 10 and remains deferred.
 
-Local preflight validates Django production settings and Compose syntax. The local Docker engine is unavailable, so container builds and HTTPS smoke checks must pass in the supplied CI job or on a Docker host before publishing this candidate.
+Local preflight validates Django production settings and Compose syntax. The local Docker engine is unavailable; Linux CI passed builds, production checks, HTTPS, real model processing, Redis delivery and restart/persistence probes for commit `4813a43` on October 10, 2026. See [the CI run](https://github.com/behrad00rad/Bintrest/actions/runs/38044472114). Real server configuration, DNS, public certificates and SMTP delivery still need verification for the actual hosting environment.
 
 ## Architecture and storage
 

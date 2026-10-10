@@ -63,6 +63,31 @@ services:
     logging:
       driver: json-file
       options: {max-size: 10m, max-file: "3"}
+  moderation:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.backend
+    command: [python, manage.py, moderate_images]
+    env_file: ${BEHTREST_ENV_FILE:-.env}
+    environment:
+      DJANGO_SETTINGS_MODULE: config.production
+      REDIS_URL: redis://redis:6379/0
+      OMP_NUM_THREADS: "1"
+      OPENBLAS_NUM_THREADS: "1"
+    depends_on:
+      backend: {condition: service_healthy}
+    restart: unless-stopped
+    cpus: 1.0
+    mem_limit: 1g
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    tmpfs: [/tmp]
+    volumes:
+      - data:/data
+    logging:
+      driver: json-file
+      options: {max-size: 10m, max-file: "3"}
 volumes:
   data:
   static:

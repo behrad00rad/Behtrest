@@ -572,7 +572,13 @@ function ReviewReport({
           >
             <option value="dismiss">Dismiss report</option>
             <option value="reopen">Reopen report</option>
-            {report.kind !== "user" && (
+            {report.kind === "image" && (
+              <>
+                <option value="approve_image">Approve image</option>
+                <option value="reject_image">Reject image</option>
+              </>
+            )}
+            {report.kind !== "user" && report.kind !== "image" && (
               <>
                 <option value="hide">Hide content</option>
                 <option value="restore">Restore content</option>
@@ -623,6 +629,23 @@ function ModerationQueue() {
   const [status, setStatus] = useState("open"),
     [selected, setSelected] = useState<Report | null>(null);
   const page = usePage<Report>(`/moderation/?status=${status}`);
+  const processing = usePage<{
+    id: number;
+    status: string;
+    username: string;
+    retrying: boolean;
+  }>("/moderation/images/");
+  const [processingError, setProcessingError] = useState("");
+  async function reviewImage(id: number) {
+    setProcessingError("");
+    try {
+      setSelected(
+        await request<Report>(`/image-scans/${id}/review/`, "POST", {}),
+      );
+    } catch (e) {
+      setProcessingError(message(e));
+    }
+  }
   return (
     <main className="collection-page product-page moderation-page">
       <div className="page-heading">
@@ -648,6 +671,39 @@ function ModerationQueue() {
         </label>
       </div>
       <ErrorNotice error={page.error} />
+      <ErrorNotice error={processingError || processing.error} />
+      {processing.items.length > 0 && (
+        <section aria-label="Images awaiting processing">
+          <h2>Images awaiting processing</h2>
+          <p className="muted">
+            These images are private. You can review them manually if scanning
+            is delayed.
+          </p>
+          {processing.items.map((item) => (
+            <article className="moderation-row" key={item.id}>
+              <div>
+                <strong>Image by @{item.username}</strong>
+                <p>{item.retrying ? "Scan retry pending" : item.status}</p>
+              </div>
+              <button
+                className="secondary-button"
+                onClick={() => void reviewImage(item.id)}
+              >
+                Review image #{item.id}
+              </button>
+            </article>
+          ))}
+          {processing.cursor && (
+            <button
+              className="secondary-button"
+              disabled={processing.loading}
+              onClick={() => void processing.loadMore()}
+            >
+              More pending images
+            </button>
+          )}
+        </section>
+      )}
       {page.items.map((item) => (
         <article className="moderation-row" key={item.id}>
           <div>
@@ -693,7 +749,10 @@ function ModerationQueue() {
         <ReviewReport
           report={selected}
           close={() => setSelected(null)}
-          done={page.reload}
+          done={() => {
+            page.reload();
+            processing.reload();
+          }}
         />
       )}
     </main>

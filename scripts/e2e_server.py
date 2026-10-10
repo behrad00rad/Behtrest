@@ -5,6 +5,7 @@ import secrets
 import signal
 import sys
 import tempfile
+import subprocess
 
 
 def stop(signum, frame):
@@ -28,11 +29,17 @@ if __name__ == "__main__":
         # Only this isolated, temporary test database gets a moderator account.
         from django.contrib.auth import get_user_model
         get_user_model().objects.create_superuser("e2e_moderator", "moderator@example.invalid", "Moderation!TestGarden29")
+        worker = None
+        if os.environ.get('BEHTREST_E2E_MODERATE') == '1':
+            worker = subprocess.Popen([sys.executable, str(Path(__file__).resolve().parents[1] / 'backend' / 'manage.py'), 'moderate_images'])
         try:
             import uvicorn
             uvicorn.run("config.asgi:application", host="127.0.0.1", port=8001, access_log=False)
         except KeyboardInterrupt:
             pass
         finally:
+            if worker:
+                worker.terminate()
+                worker.wait(timeout=15)
             from django.db import connections
             connections.close_all()

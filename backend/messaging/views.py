@@ -183,7 +183,7 @@ def messages(request, pk):
         existing = visible_messages(own).filter(sender=request.user, client_id=client_id).first()
         if existing: return success(message_data(existing, request.user))
         can_send(own)
-        pin = get_object_or_404(Post, pk=request.data["pin_id"], owner__is_active=True, is_hidden=False) if request.data.get("pin_id") else None
+        pin = get_object_or_404(Post, pk=request.data["pin_id"], owner__is_active=True, is_hidden=False, moderation_status='approved') if request.data.get("pin_id") else None
         reply = get_object_or_404(query, pk=request.data["reply_id"]) if request.data.get("reply_id") else None
         attachment = get_object_or_404(Attachment, pk=request.data["attachment_id"], conversation_id=pk, uploader=request.user, message__isnull=True) if request.data.get("attachment_id") else None
         if not content and not pin and not attachment: raise ApiError("empty_message", "Write a message or attach an image or pin.")
@@ -206,7 +206,7 @@ def shared_media(request, pk):
         raise ApiError("invalid_filter", "Choose photos, pins, or all shared items.")
     query = visible_messages(own).filter(deleted_at__isnull=True, is_hidden=False)
     photos = Q(attachment__isnull=False)
-    pins = Q(pin__isnull=False, pin__owner__is_active=True, pin__is_hidden=False)
+    pins = Q(pin__isnull=False, pin__owner__is_active=True, pin__is_hidden=False, pin__moderation_status='approved')
     query = query.filter(photos if kind == "photos" else pins if kind == "pins" else photos | pins).select_related("attachment")
     items, cursor = paginate(query, request, ["shared-media", pk, request.user.pk, own.joined_after_id, kind])
     return success({"items": [message_data(item, request.user) for item in items], "next_cursor": cursor})

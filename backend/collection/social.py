@@ -54,7 +54,7 @@ def follow_list(request, username, direction):
 
 def notification_data(item):
     actor = item.actor if item.actor and item.actor.is_active else None
-    post = item.post if item.post and not item.post.is_hidden and item.post.owner.is_active else None
+    post = item.post if item.post and not item.post.is_hidden and item.post.moderation_status == 'approved' and item.post.owner.is_active else None
     path = f"/posts/{post.pk}" if post else f"/u/{actor.username}" if actor and item.kind == "follow" else None
     return {"id": item.pk, "kind": item.kind, "actor": author_data(actor) if actor else None, "post_title": post.title if post else None, "path": path, "read": item.read_at is not None, "created_at": item.created_at.isoformat()}
 
@@ -109,10 +109,10 @@ def report(request):
     if kind not in ("post", "comment", "user", "message") or type(pk) is not int or pk <= 0:
         raise ApiError("invalid_target", "Choose valid content to report.")
     if kind == "post":
-        obj = get_object_or_404(Post, pk=pk, is_hidden=False, owner__is_active=True)
+        obj = get_object_or_404(Post, pk=pk, is_hidden=False, owner__is_active=True, moderation_status='approved')
         owner, evidence = obj.owner, f"{obj.title}\n{obj.description}"
     elif kind == "comment":
-        obj = get_object_or_404(Comment, pk=pk, is_hidden=False, post__is_hidden=False, author__is_active=True, post__owner__is_active=True)
+        obj = get_object_or_404(Comment, pk=pk, is_hidden=False, post__is_hidden=False, post__moderation_status='approved', author__is_active=True, post__owner__is_active=True)
         owner, evidence = obj.author, obj.text
     elif kind == "user":
         owner = get_object_or_404(get_user_model(), pk=pk, is_active=True)
@@ -138,6 +138,8 @@ def report_data(item):
         if post: media = post.image.url
     if item.kind == "message" and Attachment.objects.filter(message_id=item.target_id).exists():
         media = f"/api/moderation/{item.pk}/media/"
+    if item.kind == 'image':
+        media = f'/api/image-scans/{item.target_id}/image/'
     return {"id": item.pk, "kind": item.kind, "target_id": item.target_id, "target_username": item.target_user.username if item.target_user else None, "reporter": item.reporter.username if item.reporter else None, "reason": item.reason, "evidence": item.evidence, "status": item.status, "created_at": item.created_at.isoformat(), "media_url": media}
 
 
@@ -178,9 +180,22 @@ def moderate(request, pk):
         return success({**report_data(item), "history": [{"id": log.pk, "action": log.action, "reason": log.reason, "moderator": log.moderator.username if log.moderator else None, "created_at": log.created_at.isoformat()} for log in logs]})
     validate(request.data, ["action", "reason"])
     reason, action = text(request.data, "reason"), request.data.get("action")
-    if action not in ("dismiss", "reopen", "hide", "restore", "suspend", "restore_account"):
+    if action not in ("dismiss", "reopen", "hide", "restore", "suspend", "restore_account", "approve_image", "reject_image"):
         raise ApiError("invalid_action", "Choose a valid moderation action.")
-    if action in ("hide", "restore"):
+    if action in ('approve_image', 'reject_image'):
+        from .models import ImageScan
+        from .image_moderation import publish
+        if item.kind != 'image': raise ApiError('invalid_action', 'Choose an image report.')
+        scan = get_object_or_404(ImageScan.objects.select_for_update(), pk=item.target_id)
+        if scan.status == 'canceled': raise ApiError('invalid_action', 'This upload was canceled.')
+        if action == 'approve_image': publish(scan)
+        else:
+            if scan.status == 'approved': raise ApiError('invalid_action', 'Hide the published pin through a pin report.')
+            scan.status = 'rejected'
+            if scan.post_id: Post.objects.filter(pk=scan.post_id).update(moderation_status='rejected')
+        scan.token, scan.lease = None, None
+        scan.save()
+    elif action in ("hide", "restore"):
         model = {"post": Post, "comment": Comment, "message": Message}.get(item.kind)
         if model is None: raise ApiError("invalid_action", "Use an account action for this report.")
         obj = get_object_or_404(model.objects.select_for_update(), pk=item.target_id)

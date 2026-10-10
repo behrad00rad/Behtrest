@@ -3,6 +3,7 @@ from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
 from django.contrib.auth.tokens import default_token_generator
 from django.db import transaction
+from django.db.models import F
 from django.middleware.csrf import get_token
 from django.utils.encoding import force_str
 from django.utils.http import urlsafe_base64_decode
@@ -10,13 +11,16 @@ from django.views.decorators.cache import never_cache
 
 from common.api import ApiError, endpoint, success, validate_form
 from .forms import LoginForm, ProfileForm, RegistrationForm
+from .models import RegistrationPolicy, Referral, ReferralRedemption
 
 
 def serialize_user(user):
+    from collection.models import ImageScan
+    scan = ImageScan.objects.filter(profile=user.profile).exclude(status__in=['approved', 'canceled']).order_by('-id').first()
     return {
         "id": user.pk, "username": user.username, "email": user.email,
         "can_moderate": user.is_staff and user.has_perm("collection.review_reports"),
-        "profile": {"display_name": user.profile.display_name, "bio": user.profile.bio, "avatar": user.profile.avatar.url if user.profile.avatar else None},
+        "profile": {"display_name": user.profile.display_name, "bio": user.profile.bio, "avatar": user.profile.avatar.url if user.profile.avatar else None, "avatar_scan": {"id": scan.pk, "status": scan.status} if scan else None},
     }
 
 
@@ -31,9 +35,41 @@ def session(request):
 def register(request):
     form = validate_form(RegistrationForm(request.data))
     with transaction.atomic():
+        policy, _ = RegistrationPolicy.objects.get_or_create(pk=1)
+        code = request.data.get("referral_code", "")
+        if not isinstance(code, str) or len(code) > 32:
+            raise ApiError("invalid_referral", "Enter a valid referral code.", fields={"referral_code": ["Invalid referral code."]})
+        code = code.strip()
+        referral = None
+        if code or policy.invite_required:
+            referral = Referral.objects.select_for_update().filter(code=code, user__is_active=True).first()
+            if not referral or referral.used >= policy.referrals_per_user:
+                raise ApiError("invalid_referral", "This referral code is invalid or has no invites remaining.", fields={"referral_code": ["Ask a member for an available invite code."]})
+            # Conditional increment enforces the allowance even on databases where
+            # row locks are unavailable. Account creation rolls it back on failure.
+            if not Referral.objects.filter(pk=referral.pk, used__lt=policy.referrals_per_user).update(used=F("used") + 1):
+                raise ApiError("invalid_referral", "This code has no invites remaining.")
         user = form.save()
+        if referral:
+            ReferralRedemption.objects.create(referral=referral, joined_user=user)
     login(request, user)
     return success({"user": serialize_user(user), "csrfToken": get_token(request)}, 201)
+
+
+@never_cache
+@endpoint(["GET"])
+def registration_policy(request):
+    policy, _ = RegistrationPolicy.objects.get_or_create(pk=1)
+    return success({"invite_required": policy.invite_required})
+
+
+@never_cache
+@endpoint(["GET"], authenticated=True)
+def referrals(request):
+    policy, _ = RegistrationPolicy.objects.get_or_create(pk=1)
+    referral, _ = Referral.objects.get_or_create(user=request.user)
+    return success({"code": referral.code, "used": referral.used, "limit": policy.referrals_per_user,
+                    "remaining": max(0, policy.referrals_per_user - referral.used), "invite_required": policy.invite_required})
 
 
 @never_cache

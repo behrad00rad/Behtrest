@@ -8,6 +8,8 @@ Local preflight validates Django production settings and Compose syntax. The loc
 
 ## Architecture and storage
 
+Public image moderation uses a separate local CPU worker. Before a container build, run `python scripts/setup_image_model.py` to package the verified 12.2 MB model. See [IMAGE-MODERATION.md](IMAGE-MODERATION.md) for offline operation, thresholds, review, and recovery. Stop the moderation service as well as the backend before offline backups/restores.
+
 ```text
 Browser → HTTPS Caddy → /api and /admin → Uvicorn/ASGI → Django → SQLite
                       → /ws/chat/    → Channels → Redis (events/presence)

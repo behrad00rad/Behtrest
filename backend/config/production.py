@@ -24,6 +24,7 @@ DATA_ROOT = Path(os.environ.get("BEHTREST_DATA_ROOT", "/data"))
 DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": DATA_ROOT / "db.sqlite3", "OPTIONS": {"timeout": 20, "transaction_mode": "IMMEDIATE"}}}
 MEDIA_ROOT = DATA_ROOT / "media"
 PRIVATE_MEDIA_ROOT = DATA_ROOT / "private_media"
+IMAGE_MODERATION_ENABLED = os.environ.get("BEHTREST_IMAGE_MODERATION", "1") == "1"
 CHAT_ALLOWED_ORIGINS = [origin]
 REDIS_URL = os.environ.get("REDIS_URL", "redis://redis:6379/0")
 CHANNEL_LAYERS = {"default": {"BACKEND": "channels_redis.core.RedisChannelLayer", "CONFIG": {"hosts": [REDIS_URL]}}}

@@ -32,6 +32,10 @@ def check_database(path, media_names):
                 raise ValueError("A private chat image is missing from the backup.")
         if any("media/" + name not in media_names for name in names):
             raise ValueError("An image referenced by the database is missing from the backup.")
+        if database.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='collection_imagescan'").fetchone():
+            private = [name for pair in database.execute("SELECT original, thumbnail FROM collection_imagescan") for name in pair if name]
+            if any("private_media/" + name not in media_names for name in private):
+                raise ValueError("An image in moderation quarantine is missing from the backup.")
 
 
 def create_backup(database_path, media_root, output, private_root=None):

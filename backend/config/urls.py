@@ -4,8 +4,14 @@ from django.contrib import admin
 from django.urls import include, path
 from common.api import health, ready
 from collection import social
+from collection import image_moderation
 
 urlpatterns = [
+    path("api/image-scans/<int:pk>/", image_moderation.scan_status),
+    path("api/image-scans/<int:pk>/image/", image_moderation.preview),
+    path("api/image-scans/<int:pk>/appeal/", image_moderation.appeal),
+    path("api/image-scans/<int:pk>/review/", image_moderation.request_review),
+    path("api/moderation/images/", image_moderation.processing_queue),
     path("api/profiles/<str:username>/follow/", social.follow),
     path("api/profiles/<str:username>/followers/", social.follow_list, {"direction": "followers"}),
     path("api/profiles/<str:username>/following/", social.follow_list, {"direction": "following"}),

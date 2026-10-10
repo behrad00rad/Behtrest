@@ -357,6 +357,10 @@ export function PostGrid({
                 className="pin-save"
                 onClick={() => setSaving(post)}
                 aria-label={`Save ${post.title}`}
+                disabled={
+                  !!post.moderation_status &&
+                  post.moderation_status !== "approved"
+                }
               >
                 <Bookmark size={15} />
                 Save
@@ -366,6 +370,17 @@ export function PostGrid({
               <Link className="pin-title" to={`/posts/${post.id}`}>
                 {post.title}
               </Link>
+              {post.moderation_status &&
+                post.moderation_status !== "approved" && (
+                  <small className="muted">
+                    {post.moderation_status === "rejected"
+                      ? "Image blocked"
+                      : post.moderation_status === "review"
+                        ? "Awaiting review"
+                        : "Processing image"}{" "}
+                    · Only you
+                  </small>
+                )}
               <div className="pin-owner">
                 <Link to={`/u/${encodeURIComponent(post.owner.username)}`}>
                   <Avatar author={post.owner} size="tiny" />

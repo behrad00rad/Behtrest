@@ -1,6 +1,7 @@
 # V2 API
 
 Following, activity notifications, reports, and moderation endpoints are documented in [COMMUNITY.md](COMMUNITY.md).
+Background image scan, private preview, appeal, and processing-queue endpoints are documented in [IMAGE-MODERATION.md](IMAGE-MODERATION.md).
 
 All paths below are under `/api/`. Requests and responses use JSON, except image uploads which use multipart form data. Success: `{"data": ...}`. Errors: `{"error":{"code":"...","message":"...","fields":{"field":["message"]}}}`; `fields` is included only when applicable.
 

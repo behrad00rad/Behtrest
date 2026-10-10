@@ -77,6 +77,10 @@ test("follow, activity preferences, report review, and reversible moderation", a
       }),
     ).toBeVisible();
     const postURL = page.url();
+    // Followers should see this pin only after the asynchronous image check.
+    await expect(
+      page.getByRole("button", { name: "Save", exact: true }),
+    ).toBeEnabled({ timeout: 15000 });
     await peer.goto(`/u/${alice}`);
     await peer.getByRole("button", { name: "Follow", exact: true }).click();
     await expect(

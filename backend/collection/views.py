@@ -1,4 +1,5 @@
 import re
+from django.conf import settings
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
@@ -20,7 +21,7 @@ from .activity import emit
 
 
 def posts_query():
-    return Post.objects.filter(owner__is_active=True, is_hidden=False).select_related('owner__profile').prefetch_related('tags')
+    return Post.objects.filter(owner__is_active=True, is_hidden=False, moderation_status='approved').select_related('owner__profile').prefetch_related('tags')
 
 
 def require_user(request):
@@ -97,13 +98,15 @@ def feed(request):
         raise ApiError('invalid_filter', 'Search text or filters are too long.')
     if tag and not re.fullmatch(r'[a-z0-9_-]{1,40}', tag):
         raise ApiError('invalid_filter', 'Choose a valid tag.')
+    if owner and request.user.is_authenticated and owner == request.user.username and following == '0':
+        query = Post.objects.filter(owner__is_active=True, is_hidden=False).filter(Q(moderation_status='approved') | Q(owner=request.user)).select_related('owner__profile').prefetch_related('tags')
     if text:
         query = query.filter(Q(title__icontains=text) | Q(description__icontains=text) | Q(tags__name__icontains=text) | Q(owner__username__icontains=text) | Q(owner__profile__display_name__icontains=text)).distinct()
     if tag:
         query = query.filter(tags__name=tag)
     if owner:
         query = query.filter(owner__username=owner)
-    items, cursor = paginate(query, request, {'kind': 'feed', 'q': text, 'tag': tag, 'owner': owner, 'sort': sort, 'following': request.user.pk if following == '1' else None}, ascending=sort == 'oldest')
+    items, cursor = paginate(query, request, {'kind': 'feed', 'q': text, 'tag': tag, 'owner': owner, 'sort': sort, 'following': request.user.pk if following == '1' else None, 'owner_viewer': request.user.pk if owner and request.user.is_authenticated and owner == request.user.username else None}, ascending=sort == 'oldest')
     return success({'items': [post_data(post) for post in items], 'next_cursor': cursor})
 
 
@@ -116,16 +119,21 @@ def create_post(request):
     post = apply_form(Post(owner=request.user), request.data, PostMetadataForm, fields)
     tags = tags_from_input(request.data.get('tags', ''))
     prepared = prepare_image(request.FILES['image'])
-    names, width, height = store_images(prepared, request.user.pk)
+    names, width, height = ([], prepared[2], prepared[3]) if settings.IMAGE_MODERATION_ENABLED else store_images(prepared, request.user.pk)
     try:
         with transaction.atomic():
-            post.image, post.thumbnail = names
+            if names: post.image, post.thumbnail = names
+            else: post.moderation_status = 'pending'
             post.image_width, post.image_height = width, height
-            post.full_clean(exclude=['tags'])
+            post.full_clean(exclude=['tags'] if names else ['tags', 'image'])
             post.save()
             assign_tags(post, tags)
-            for edge in Follow.objects.filter(target=request.user, follower__is_active=True).select_related('follower'):
-                emit(edge.follower, request.user, 'pin', f'pin:{post.pk}', post)
+            if not names:
+                from .image_moderation import enqueue
+                enqueue(request.user, prepared, post=post)
+            else:
+                for edge in Follow.objects.filter(target=request.user, follower__is_active=True).select_related('follower'):
+                    emit(edge.follower, request.user, 'pin', f'pin:{post.pk}', post)
     except Exception:
         delete_files(names)
         raise
@@ -134,7 +142,8 @@ def create_post(request):
 
 @endpoint(['GET', 'PATCH', 'DELETE'], rate=(30, 60))
 def post_owner_actions(request, pk):
-    post = get_object_or_404(posts_query(), pk=pk)
+    post = get_object_or_404(Post.objects.select_related('owner__profile').prefetch_related('tags'), pk=pk, owner__is_active=True, is_hidden=False)
+    if post.moderation_status != 'approved' and post.owner_id != request.user.pk: raise Http404
     if request.method == 'GET':
         return success(post_data(post))
     require_user(request)
@@ -161,7 +170,7 @@ def post_owner_actions(request, pk):
 
 @endpoint(['GET', 'POST'], rate=(30, 60))
 def comments(request, pk):
-    post = get_object_or_404(Post, pk=pk, owner__is_active=True, is_hidden=False)
+    post = get_object_or_404(Post, pk=pk, owner__is_active=True, is_hidden=False, moderation_status='approved')
     if request.method == 'GET':
         query = post.comments.filter(author__is_active=True, is_hidden=False).select_related('author__profile')
         items, cursor = paginate(query, request, {'kind': 'comments', 'post': pk}, ascending=True)
@@ -178,7 +187,7 @@ def comments(request, pk):
 
 @endpoint(['PATCH', 'DELETE'], authenticated=True, rate=(30, 60))
 def comment_owner_actions(request, pk):
-    comment = get_object_or_404(Comment.objects.select_related('author__profile'), pk=pk, author=request.user, is_hidden=False, post__is_hidden=False)
+    comment = get_object_or_404(Comment.objects.select_related('author__profile'), pk=pk, author=request.user, is_hidden=False, post__is_hidden=False, post__moderation_status='approved')
     if request.method == 'DELETE':
         comment.delete()
         return success({'deleted': True})
@@ -238,7 +247,7 @@ def board_owner_actions(request, pk):
         if cover_id is not None:
             if not isinstance(cover_id, int) or isinstance(cover_id, bool):
                 raise ApiError('invalid_cover', 'Choose a post saved in this board.')
-            saved = get_object_or_404(SavedPost.objects.select_related('post'), board=board, post_id=cover_id, post__owner__is_active=True, post__is_hidden=False)
+            saved = get_object_or_404(SavedPost.objects.select_related('post'), board=board, post_id=cover_id, post__owner__is_active=True, post__is_hidden=False, post__moderation_status='approved')
             board.cover = saved.post
         else:
             board.cover = None
@@ -250,7 +259,7 @@ def board_owner_actions(request, pk):
 @endpoint(['GET'])
 def board_posts(request, pk):
     board = visible_board(request, pk)
-    query = board.saved_posts.filter(post__owner__is_active=True, post__is_hidden=False).select_related('post__owner__profile').prefetch_related('post__tags')
+    query = board.saved_posts.filter(post__owner__is_active=True, post__is_hidden=False, post__moderation_status='approved').select_related('post__owner__profile').prefetch_related('post__tags')
     text = request.GET.get('q', '').strip()
     sort = request.GET.get('sort', 'newest')
     if len(text) > 100 or sort not in ('newest', 'oldest'):
@@ -268,7 +277,7 @@ def save_to_board(request, pk):
     post_id = request.data.get('post_id')
     if not isinstance(post_id, int) or isinstance(post_id, bool):
         raise ApiError('invalid_post', 'Choose a valid post.')
-    post = get_object_or_404(Post, pk=post_id, owner__is_active=True, is_hidden=False)
+    post = get_object_or_404(Post, pk=post_id, owner__is_active=True, is_hidden=False, moderation_status='approved')
     with transaction.atomic():
         saved, created = SavedPost.objects.get_or_create(board=board, post=post)
         if created and not board.is_private:
@@ -301,7 +310,7 @@ def profile_detail(request, username):
     board_query = user.boards.all()
     if not request.user.is_authenticated or request.user.pk != user.pk:
         board_query = board_query.filter(is_private=False)
-    return success({**author_data(user), 'bio': user.profile.bio, 'post_count': user.posts.filter(is_hidden=False).count(), 'board_count': board_query.count(), 'follower_count': user.follower_edges.filter(follower__is_active=True).count(), 'following_count': user.following_edges.filter(target__is_active=True).count(), 'is_following': request.user.is_authenticated and Follow.objects.filter(follower=request.user, target=user).exists()})
+    return success({**author_data(user), 'bio': user.profile.bio, 'post_count': user.posts.filter(is_hidden=False, moderation_status='approved').count(), 'board_count': board_query.count(), 'follower_count': user.follower_edges.filter(follower__is_active=True).count(), 'following_count': user.following_edges.filter(target__is_active=True).count(), 'is_following': request.user.is_authenticated and Follow.objects.filter(follower=request.user, target=user).exists()})
 
 
 @endpoint(['POST'], authenticated=True, rate=(30, 60), multipart=True)
@@ -310,6 +319,12 @@ def avatar_upload(request):
     if set(request.FILES) != {'image'} or len(request.FILES.getlist('image')) != 1:
         raise ApiError('invalid_image', 'Choose exactly one avatar image.')
     profile = request.user.profile
+    if settings.IMAGE_MODERATION_ENABLED:
+        from .image_moderation import enqueue, scan_data
+        with transaction.atomic():
+            Profile.objects.select_for_update().get(pk=profile.pk)
+            scan = enqueue(request.user, prepare_image(request.FILES['image'], avatar=True), profile=profile)
+        return success({'user': serialize_user(request.user), 'scan': scan_data(scan)}, 202)
     previous = profile.avatar.name
     names, _, _ = store_images(prepare_image(request.FILES['image'], avatar=True), request.user.pk, avatar=True)
     try:
@@ -330,6 +345,8 @@ def avatar_delete(request):
     profile = request.user.profile
     previous = profile.avatar.name
     with transaction.atomic():
+        from .models import ImageScan
+        ImageScan.objects.filter(profile=profile, status__in=['pending', 'scanning', 'review', 'rejected']).update(status='canceled', token=None)
         changed = Profile.objects.filter(pk=profile.pk, avatar=previous).update(avatar='')
         if not changed:
             raise ApiError('conflict', 'Your avatar changed in another request. Please try again.', 409)
@@ -350,4 +367,4 @@ def people_search(request):
 
 @endpoint(['GET'])
 def tag_list(request):
-    return success({'items': list(Tag.objects.filter(posts__owner__is_active=True, posts__is_hidden=False).distinct().order_by('name').values_list('name', flat=True)[:100])})
+    return success({'items': list(Tag.objects.filter(posts__owner__is_active=True, posts__is_hidden=False, posts__moderation_status='approved').distinct().order_by('name').values_list('name', flat=True)[:100])})

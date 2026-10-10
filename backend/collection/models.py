@@ -19,6 +19,7 @@ class TimestampedModel(models.Model):
 
 
 class Post(TimestampedModel):
+    moderation_status = models.CharField(max_length=12, default="approved", db_index=True)
     is_hidden = models.BooleanField(default=False, db_index=True)
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="posts")
     title = models.CharField(max_length=200)
@@ -38,6 +39,23 @@ class Post(TimestampedModel):
 
     def __str__(self):
         return self.title
+
+
+class ImageScan(TimestampedModel):
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    post = models.OneToOneField(Post, null=True, blank=True, on_delete=models.CASCADE, related_name="image_scan")
+    profile = models.ForeignKey("accounts.Profile", null=True, blank=True, on_delete=models.CASCADE)
+    original = models.CharField(max_length=300)
+    thumbnail = models.CharField(max_length=300, blank=True)
+    width = models.PositiveIntegerField()
+    height = models.PositiveIntegerField()
+    status = models.CharField(max_length=12, default="pending", db_index=True)
+    attempts = models.PositiveIntegerField(default=0)
+    lease = models.DateTimeField(null=True, blank=True)
+    token = models.UUIDField(null=True, blank=True)
+    retry_at = models.DateTimeField(null=True, blank=True)
+    scores = models.JSONField(default=dict)
+    error = models.CharField(max_length=80, blank=True)
 
 
 class Comment(TimestampedModel):

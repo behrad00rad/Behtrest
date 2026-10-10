@@ -8,8 +8,10 @@ class PostAdmin(admin.ModelAdmin):
     list_display = ("title", "owner", "created_at")
     search_fields = ("title", "description", "owner__username")
     list_filter = ("created_at",)
-    readonly_fields = ("image_width", "image_height", "created_at", "updated_at")
+    readonly_fields = ("image", "thumbnail", "image_width", "image_height", "created_at", "updated_at", "moderation_status")
     autocomplete_fields = ("owner",)
+
+    def has_add_permission(self, request): return False
 
 
 @admin.register(Comment)

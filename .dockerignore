@@ -17,3 +17,5 @@
 **/*.tsbuildinfo
 **/playwright-report/**
 **/test-results/**
+**/models/*.whl
+**/backups/**

@@ -81,3 +81,10 @@ X_FRAME_OPTIONS = "DENY"
 # Rate buckets are persisted in SQLite, shared by all Django workers.
 # REMOTE_ADDR is authoritative; forwarding headers are deliberately not trusted.
 API_RATE_LIMITS_ENABLED = True
+IMAGE_MODERATION_ENABLED = os.environ.get("BEHTREST_IMAGE_MODERATION", "0") == "1"
+IMAGE_MODERATION_MODEL = os.environ.get("BEHTREST_IMAGE_MODEL", str(BASE_DIR / "models" / "nudenet-320.onnx"))
+IMAGE_MODERATION_REVIEW = float(os.environ.get("BEHTREST_IMAGE_REVIEW", "0.35"))
+IMAGE_MODERATION_REJECT = float(os.environ.get("BEHTREST_IMAGE_REJECT", "0.75"))
+if not 0 <= IMAGE_MODERATION_REVIEW < IMAGE_MODERATION_REJECT <= 1:
+    from django.core.exceptions import ImproperlyConfigured
+    raise ImproperlyConfigured('Image moderation thresholds must satisfy 0 <= review < reject <= 1.')

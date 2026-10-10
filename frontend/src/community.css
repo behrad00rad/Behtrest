@@ -225,3 +225,18 @@
     gap: 10px;
   }
 }
+.image-check {
+  padding: 14px 16px;
+  margin-bottom: 18px;
+  border-radius: 12px;
+  background: #111f33;
+  color: #b6c9e2;
+}
+.image-check img {
+  border-radius: 12px;
+  object-fit: cover;
+  margin-bottom: 10px;
+}
+.image-check p {
+  margin: 0 0 10px;
+}

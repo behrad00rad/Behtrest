@@ -1,5 +1,16 @@
 # Tasks 1–4 verification
 
+## Local background image moderation — October 10, 2026
+
+- Committed and pushed the previous Behtrest/community checkpoint to `origin/main` as `78e8db2` before implementation. New moderation work remains local/uncommitted.
+- Announced downloads before fetching the CPU runtime (~28 MB of wheels) and pinned NudeNet package (~10.6 MB, containing a 12.2 MB model). The original release download returned HTML and was rejected by size validation; the official PyPI package supplied the model. Its SHA-256 matches the pinned value. Upstream license/provenance are preserved; model binaries and local backup/environment files are excluded from Git.
+- Full backend suite: **95 tests passed**. Eleven image-moderation tests cover private previews and owner pagination, approval-only visibility, follower notification timing/idempotence, rejection/appeals, moderator permissions/manual approval, scan failures/backoff, expired leases/stale tokens, avatar replacement/removal races, quarantine cleanup, and invalid outputs/missing models. A 41-test collections/community run and focused image checks passed after final isolation/admin/pagination changes.
+- All **six desktop/mobile journeys passed with the real local model and worker enabled**. Both community journeys passed a final focused rerun after explicitly waiting for background approval before checking public following-feed contents. Axe/overflow checks on the tested screens passed. This tests benign fixture processing and application flows, not detector accuracy on a representative nudity dataset.
+- Frontend formatting and TypeScript/Vite production build, Django checks/migration drift, Python compilation, diff whitespace checks, and updated Docker Compose syntax validation passed. The recovery drill restored a pending avatar scan and both private files alongside the existing 24 pins/4 boards/24 saves/48 public media files.
+- A safe fixture's first local inference took approximately **66 ms**. The running Windows worker used approximately **99 MB RSS while idle** after model loading; these are local observations, not server load/accuracy benchmarks. CPU inference is limited to one thread/one image at a time, with a Docker worker limit of one CPU/1 GB RAM.
+- Backed up normal V2 preview data to ignored `backend/backups/pre-image-moderation.zip` (52 verified files), applied the additive migration, enabled public pin/avatar screening, and started the separate local worker. Existing public content is not retroactively scanned, and private chat photos are not automatically screened. Docker model packaging/worker configuration is prepared; container runtime verification remains pending without a local engine.
+
+
 ## Community features and Behtrest rename — October 10, 2026
 
 - Implemented roadmap items 3, 5, and 6: reports and moderation, following and a following feed, and activity notifications/preferences. The current app, package/config names, email labels, operating docs, and deployment examples use Behtrest. Original source/README and the actual GitHub repository URL retain their history. Existing browser drafts and legacy environment variables have compatibility handling.

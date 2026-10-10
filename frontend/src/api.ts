@@ -3,7 +3,12 @@ export type User = {
   id: number;
   username: string;
   email: string;
-  profile: { display_name: string; bio: string; avatar: string | null };
+  profile: {
+    display_name: string;
+    bio: string;
+    avatar: string | null;
+    avatar_scan?: { id: number; status: string } | null;
+  };
 };
 export type Session = { user: User | null; csrfToken: string };
 

@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from "react";
+import { ImageCheck } from "./ImageCheck";
+import Referrals from "./Referrals";
 import type { FormEvent } from "react";
 import {
   Link,
@@ -202,6 +204,9 @@ function EditProfile({
   done: () => void;
 }) {
   const auth = useAuth();
+  const [scanId, setScanId] = useState<number | null>(
+    auth.user?.profile.avatar_scan?.id || null,
+  );
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [progress, setProgress] = useState(0);
@@ -239,13 +244,14 @@ function EditProfile({
     const body = new FormData();
     body.append("image", file);
     try {
-      const result = await upload<{ user: User }>(
+      const result = await upload<{ user: User; scan?: { id: number } }>(
         "/profile/avatar/",
         body,
         setProgress,
         controller.current.signal,
       );
       auth.setUser(result.user);
+      if (result.scan) setScanId(result.scan.id);
       done();
     } catch (error) {
       if (!controller.current.signal.aborted) setError(message(error));
@@ -263,6 +269,7 @@ function EditProfile({
         {},
       );
       auth.setUser(result.user);
+      setScanId(null);
       done();
     } catch (error) {
       setError(message(error));
@@ -273,6 +280,17 @@ function EditProfile({
   const currentAvatar = auth.user?.profile.avatar;
   return (
     <Modal title="Edit profile" busy={busy} close={close}>
+      {scanId && (
+        <ImageCheck
+          id={scanId}
+          picture
+          approved={(user) => {
+            auth.setUser(user);
+            setScanId(null);
+            done();
+          }}
+        />
+      )}
       <div className="avatar-editor">
         <Avatar
           author={{
@@ -390,6 +408,7 @@ export function ProfilePage() {
         )}
       </section>
       <FollowControls profile={profile} reload={resource.reload} />
+      {own && <Referrals />}
       <div className="tabs profile-tabs">
         <button
           className={tab === "pins" ? "active" : ""}

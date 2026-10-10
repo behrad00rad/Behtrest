@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { ArrowRight, Check, Eye, EyeOff } from "lucide-react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
@@ -43,6 +43,13 @@ export default function AccountForm({ mode }: { mode: Mode }) {
   const [visible, setVisible] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
   const [done, setDone] = useState("");
+  const [inviteRequired, setInviteRequired] = useState(false);
+  useEffect(() => {
+    if (mode === "register")
+      request<{ invite_required: boolean }>("/auth/registration-policy/")
+        .then((data) => setInviteRequired(data.invite_required))
+        .catch((error) => setError(error));
+  }, [mode]);
   if (auth.user && (mode === "login" || mode === "register"))
     return <Navigate to="/" replace />;
   const copy = content[mode];
@@ -117,6 +124,30 @@ export default function AccountForm({ mode }: { mode: Mode }) {
             </div>
           ) : (
             <form onSubmit={submit} aria-label={copy.button}>
+              {registering && (
+                <label className="field" htmlFor="referral_code">
+                  Referral code {inviteRequired ? "(required)" : "(optional)"}
+                  <input
+                    id="referral_code"
+                    name="referral_code"
+                    maxLength={32}
+                    required={inviteRequired}
+                    defaultValue={
+                      new URLSearchParams(window.location.search).get("ref") ||
+                      ""
+                    }
+                    autoComplete="off"
+                    placeholder="A code from a member"
+                    aria-invalid={Boolean(error?.fields.referral_code)}
+                  />
+                  {inviteRequired && (
+                    <span>
+                      Behtrest is invite-only. Ask a member for their code.
+                    </span>
+                  )}
+                  {fieldErrors("referral_code")}
+                </label>
+              )}
               {(registering || mode === "login") && (
                 <label className="field" htmlFor="username">
                   Username

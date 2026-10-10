@@ -18,7 +18,7 @@ class MediaTestCase(TestCase):
     def setUp(self):
         directory = tempfile.TemporaryDirectory()
         self.addCleanup(directory.cleanup)
-        override = override_settings(MEDIA_ROOT=directory.name)
+        override = override_settings(MEDIA_ROOT=directory.name, IMAGE_MODERATION_ENABLED=False)
         override.enable()
         self.addCleanup(override.disable)
 

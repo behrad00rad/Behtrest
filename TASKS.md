@@ -171,6 +171,17 @@ Restored rounded corners at the user's request: 10px controls and 14px images, p
 
 See `docs/COMMUNITY.md` for behavior and moderator setup and `docs/VERIFICATION.md` for checks.
 
+## Local image moderation (approved October 10, 2026)
+
+- [x] Commit and push the Behtrest/community checkpoint before implementation (`78e8db2`).
+- [x] Package a pinned CPU model and runtime with announced download sizes and no runtime internet dependency.
+- [x] Add private upload quarantine, owner previews/status, a durable background worker, lease/retry recovery, and approval-only public visibility.
+- [x] Apply the user's no-nudity rule to public pins and avatars; support human review, rejection appeals, and stalled-upload handling.
+- [x] Preserve pending assets in verified backups and add cleanup/deployment/operation documentation.
+- [x] Verify backend rules and desktop/mobile workflows with the real local worker. Private chat automatic screening remains outside this implementation pending the separate preference.
+
+See `docs/IMAGE-MODERATION.md` and `docs/VERIFICATION.md`. Existing public uploads are not retroactively scanned.
+
 ## Review checkpoint
 
 The user approved tasks 1–9 and 11. Task 9 is complete; task 11 is prepared with container runtime verification still pending. Task 10 is deferred. No public deployment is authorized. The original completion year remains unconfirmed; do not turn the 2022 course-folder reference into a claimed completion date.

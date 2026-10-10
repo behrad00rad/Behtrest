@@ -32,6 +32,8 @@ test-results/
 media/
 private_media/
 backend/backups/
+backend/models/*.onnx
+backend/models/*.whl
 staticfiles/
 btrest/back/images/*
 !btrest/back/images/default.jpg

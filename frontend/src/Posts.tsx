@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { ImageCheck } from "./ImageCheck";
 import type { FormEvent } from "react";
 import {
   Link,
@@ -834,12 +835,25 @@ export function PostDetail() {
           />
         </div>
         <div className="detail-copy">
-          <div className="detail-actions">
-            <ShareControl
-              title="pin"
-              path={`/posts/${post.id}`}
-              chat={`/messages?pin=${post.id}`}
+          {post.scan_id && post.moderation_status !== "approved" && (
+            <ImageCheck
+              id={post.scan_id}
+              approved={() => {
+                void request<Post>(`/posts/${post.id}/`)
+                  .then(resource.setData)
+                  .catch((e) => setError(message(e)));
+              }}
             />
+          )}
+          <div className="detail-actions">
+            {(!post.moderation_status ||
+              post.moderation_status === "approved") && (
+              <ShareControl
+                title="pin"
+                path={`/posts/${post.id}`}
+                chat={`/messages?pin=${post.id}`}
+              />
+            )}
             {post.source_url ? (
               <a
                 className="source-link"
@@ -861,6 +875,10 @@ export function PostDetail() {
             <button
               className="primary-button compact"
               onClick={() => setSaving(true)}
+              disabled={
+                !!post.moderation_status &&
+                post.moderation_status !== "approved"
+              }
             >
               <Bookmark size={17} />
               Save
@@ -916,7 +934,10 @@ export function PostDetail() {
           {post.owner.id !== user?.id && (
             <ReportButton kind="post" target={post.id} label="Report pin" />
           )}
-          <Comments key={post.id} postId={post.id} />
+          {(!post.moderation_status ||
+            post.moderation_status === "approved") && (
+            <Comments key={post.id} postId={post.id} />
+          )}
         </div>
       </article>
       {viewing && (

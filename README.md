@@ -46,6 +46,7 @@ Implemented:
 - Opt-in browser notifications, privacy preferences, UUID send retries, and reconnect/history synchronization.
 - Following, a following feed, follower lists, and activity notifications with unread controls and preferences.
 - Reports, permission-checked moderation, reversible hiding/suspension, and an audit trail. See [community behavior and moderator setup](docs/COMMUNITY.md).
+- Local background image screening for public pins and avatars, private previews, retries, and human review/appeals. See [setup and behavior](docs/IMAGE-MODERATION.md).
 - A Docker/Caddy/Uvicorn/Redis deployment candidate, production configuration checks, database readiness, and verified V2 backup/restore commands including private chat images.
 
 Private boards hide their collections; the original pins remain public. Local development uses filesystem media storage. Retry failed deletions with `python backend/manage.py cleanup_media` using the project virtual environment.

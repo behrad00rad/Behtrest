@@ -1,6 +1,35 @@
 from django.contrib.auth.models import AbstractUser, UserManager
 from django.db import models
 from django.db.models.functions import Lower
+import secrets
+
+
+def referral_code():
+    return secrets.token_urlsafe(18)
+
+
+class RegistrationPolicy(models.Model):
+    invite_required = models.BooleanField(default=False)
+    referrals_per_user = models.PositiveIntegerField(default=5, help_text="Lifetime successful signups per member. Zero disables invites; increasing this grants more invites.")
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return "Registration settings"
+
+
+class Referral(models.Model):
+    user = models.OneToOneField("User", on_delete=models.CASCADE, related_name="referral")
+    code = models.CharField(max_length=32, unique=True, default=referral_code, editable=False)
+    used = models.PositiveIntegerField(default=0, editable=False)
+
+
+class ReferralRedemption(models.Model):
+    referral = models.ForeignKey(Referral, on_delete=models.CASCADE)
+    joined_user = models.OneToOneField("User", null=True, on_delete=models.SET_NULL)
+    created_at = models.DateTimeField(auto_now_add=True)
 
 
 class NormalizedUserManager(UserManager):

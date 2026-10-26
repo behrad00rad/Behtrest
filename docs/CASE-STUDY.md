@@ -37,3 +37,8 @@ This is repository case-study material. No external portfolio/CMS page was chang
 The October 27 preview replaces generic stock photography with 18 owner-supplied images: monochrome portraits, owls, tattoo references, typography and dark illustration. Every sample has a title, contextual caption, useful alt text and searchable tags. Original proportions survive normalization. Repeated seeding does not duplicate samples or replace user-created content. Sample provenance is labeled honestly; creator attribution and publication rights remain unverified.
 
 One-click guest entry skips setup; optional accounts need only username and a six-character password. These rules are confined to the demo. A separate Compose project and production-derived HTTPS settings prepare it for hosting without sharing the real app database. A dependency-free Docker sampler measures resource use before choosing tighter limits. Linux container acceptance and deployment remain pending.
+
+
+### Shipping on a shared 2 GB VPS
+
+The public preview at https://behtrest.behrad.xyz uses compiled frontend assets, existing nginx and one isolated API/model worker each. No frontend build, Vite or Node server runs on the host. Cloudflare client IPs are accepted only from its published edge networks. The database started clean with 18 curated pins; all deployment verification data was removed. Short acceptance measurements were about 163 MB combined API/model/Redis after uploads and 128 MB at subsequent idle, with the existing music services remaining active. Verified daily backups and cleanup are scheduled; encrypted off-server recovery and sustained-load capacity remain follow-ups.

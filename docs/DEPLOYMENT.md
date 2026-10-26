@@ -1,5 +1,7 @@
 # Portable deployment candidate
 
+**Current hosted demo (October 27):** [behtrest.behrad.xyz](https://behtrest.behrad.xyz) now runs compiled frontend assets, nginx and isolated resource-limited systemd services on the small VPS. See [native deployment and operations](../deploy/native/README.md). The Docker candidate below remains an alternative; its earlier undeployed statements are historical.
+
 The current product and environment examples use Behtrest / `BEHTREST_*`. Django also accepts legacy `BINTREST_*` variables when their new equivalents are absent. For an existing Compose deployment, retain its original project name with `docker compose -p bintrest ...` so the same named volumes are reused; do not remove or silently replace existing volumes when adopting the new name. Copy the current environment example and transfer existing values before upgrading, including the domain used by Compose/Caddy. The GitHub repository URL and preserved V1 history retain their original names.
 
 Prepared October 9, 2026. Target: a small Linux server running Docker Engine and Compose, one hostname, one Django service, SQLite, and local persistent media. The user selected a portable Docker setup. No server, DNS record, account, or public site has been provisioned. Legacy import is task 10 and remains deferred.

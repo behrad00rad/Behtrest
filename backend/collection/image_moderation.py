@@ -124,6 +124,7 @@ def appeal(request, pk):
 class Detector:
     def __init__(self):
         import onnxruntime as ort
+        ort.disable_telemetry_events()
         path = Path(settings.IMAGE_MODERATION_MODEL)
         if hashlib.sha256(path.read_bytes()).hexdigest() != MODEL_SHA256:
             raise ValueError("Model checksum mismatch")

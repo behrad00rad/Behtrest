@@ -1,0 +1,31 @@
+[Unit]
+Description=Behtrest CPU image moderation
+After=behtrest-api.service redis-server.service
+Requires=redis-server.service
+
+[Service]
+User=behtrest
+Group=behtrest
+WorkingDirectory=/srv/behtrest/current/backend
+EnvironmentFile=/etc/behtrest/preview.env
+Environment=OMP_NUM_THREADS=1
+Environment=OPENBLAS_NUM_THREADS=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/srv/behtrest/venv/bin/python manage.py moderate_images
+Restart=on-failure
+RestartSec=5
+MemoryHigh=256M
+MemoryMax=384M
+CPUQuota=30%
+Nice=10
+TasksMax=32
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/behtrest
+
+[Install]
+WantedBy=multi-user.target

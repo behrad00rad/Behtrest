@@ -1,0 +1,9 @@
+[Unit]
+Description=Verified Behtrest database and media backup
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash /srv/behtrest/current/deploy/native/backup.sh
+Nice=15
+CPUQuota=30%
+MemoryMax=192M

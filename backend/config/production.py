@@ -53,7 +53,7 @@ EMAIL_USE_SSL = os.environ.get("EMAIL_USE_SSL", "0") == "1"
 EMAIL_TIMEOUT = 15
 if EMAIL_USE_TLS and EMAIL_USE_SSL:
     raise ImproperlyConfigured("Use either SMTP STARTTLS or implicit SSL, not both.")
-if not EMAIL_HOST or "localhost" in DEFAULT_FROM_EMAIL:  # noqa: F405
+if os.environ.get('DJANGO_SETTINGS_MODULE') != 'config.preview_production' and (not EMAIL_HOST or "localhost" in DEFAULT_FROM_EMAIL):  # noqa: F405
     raise ImproperlyConfigured("Configure EMAIL_HOST and DEFAULT_FROM_EMAIL for production reset delivery.")
 LOGGING = {
     "version": 1, "disable_existing_loggers": False,

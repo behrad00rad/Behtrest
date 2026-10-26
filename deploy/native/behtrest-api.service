@@ -1,0 +1,28 @@
+[Unit]
+Description=Behtrest production preview API
+After=network.target redis-server.service
+Requires=redis-server.service
+
+[Service]
+User=behtrest
+Group=behtrest
+WorkingDirectory=/srv/behtrest/current/backend
+EnvironmentFile=/etc/behtrest/preview.env
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/srv/behtrest/venv/bin/uvicorn config.asgi:application --host 127.0.0.1 --port 8092 --workers 1 --no-access-log --no-proxy-headers
+Restart=on-failure
+RestartSec=5
+MemoryHigh=256M
+MemoryMax=384M
+CPUQuota=60%
+TasksMax=64
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/behtrest
+
+[Install]
+WantedBy=multi-user.target

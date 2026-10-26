@@ -1,12 +1,14 @@
 # Hosted preview and resource budget
 
+The demo is now live at https://behtrest.behrad.xyz using the existing nginx and native systemd services rather than installing Docker. See [live paths, limits, acceptance and backups](../deploy/native/README.md). The Docker instructions below are an alternative. Hosted-preview email delivery is disabled because demo accounts have synthetic addresses; SMTP is still required for normal production.
+
 The isolated demo now uses 18 site-owner-supplied moodboard images in `preview/`. The JSON catalog contains authored titles, descriptions, alt text and tags. Existing normalization retains aspect ratios, produces WebP thumbnails and removes metadata. Sample downloads are disabled. Source links identify the supplied Pinterest board; original creators and reuse rights are not verified. Confirm publication rights before public hosting.
 
 Seeding is repeatable and refuses normal settings. Only exact legacy catalog sources belonging to verified fictional accounts are replaced; user uploads remain untouched. The local launcher needs no photo download anymore.
 
 ## Hosted setup
 
-Copy `deploy/.env.preview.example` to ignored `deploy/.env.preview`. Set the actual domain, HTTPS origin, SMTP credentials and a fresh random DJANGO_SECRET_KEY. Install the pinned model with `python scripts/setup_image_model.py` before building. Configure DNS and allow 80/443. Never reuse production volumes or secrets.
+Copy `deploy/.env.preview.example` to ignored `deploy/.env.preview`. Set the actual domain, HTTPS origin and a fresh random DJANGO_SECRET_KEY. SMTP is optional for this demo because email delivery/recovery is disabled; normal production still requires it. Install the pinned model with `python scripts/setup_image_model.py` before building. Configure DNS and allow 80/443. Never reuse production volumes or secrets.
 
 From `deploy/`, set `BEHTREST_ENV_FILE=.env.preview` in the shell. Use this prefix for every operation, including backup/restore:
 

@@ -173,3 +173,10 @@ All browser fixtures and runtime data are local/ignored. Screenshots were inspec
 ## October 27: curated hosted preview preparation
 
 18 supplied images received complete authored metadata and repeatable isolated seeding. Local database backed up before replacing only legacy fictional-owner pins; 9 other posts remained. Curated seed tests confirm idempotence and preservation of real posts. 22 focused seed/auth/moderation tests passed. Typecheck, formatting, frontend build, Django production-preview deployment checks, Compose configuration and diff whitespace checks passed. No lint script is configured. Edge checks at 375/768/1440px verified loaded feed images, no horizontal overflow, one-click guest access without interest onboarding, and username/six-character-password signup without email/referral/confirmation. Docker engine unavailable: no container runtime, Linux RAM/CPU benchmark, HTTPS deployment, SMTP delivery or physical-device acceptance claimed.
+
+
+## October 27: native production preview
+
+Deployed prebuilt frontend and pinned Python runtime behind existing nginx/Cloudflare at behtrest.behrad.xyz. See [exact scope, limits and acceptance](../deploy/native/README.md). Real HTTPS guest/signup journeys passed at 375/768/1440, loaded images, secure sessions, live model approval and WSS handshake. Browser hostname resolution was explicitly mapped to origin due local DNS propagation; public Cloudflare readiness was separately checked from the VPS. Removed all deployment verification accounts/posts; only 18 curated pins remained. Verified backup created and cleanup/timers enabled. Existing LilCusin services stayed active. No sustained-load or physical-device acceptance, email delivery or off-server recovery claim.
+
+Final regression: 24 focused hosted-settings, guest-auth, curated-seed and moderation tests passed. The normal production SMTP requirement remains covered. Frontend typecheck, formatting and build were already verified for the exact unchanged frontend artifact; no lint script exists. Native systemd and nginx configuration checks passed.

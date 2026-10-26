@@ -2,10 +2,12 @@ def author_data(user):
     return {"id": user.pk, "username": user.username, "display_name": user.profile.display_name, "avatar": user.profile.avatar.url if user.profile.avatar else None}
 
 
-def post_data(post, liked=None):
+def post_data(post, liked=None, include_config=False):
+    from .words import language_warning
+    warnings = ['language'] if include_config and post.type == 'text_card' and language_warning(post.text_content) else []
     scan = getattr(post, 'image_scan', None) if post.moderation_status != 'approved' else None
     image = f'/api/image-scans/{scan.pk}/image/' if scan else post.image.url
-    return {"id": post.pk, "title": post.title, "description": post.description, "like_count": post.like_count, "liked": bool(getattr(post, 'viewer_liked', False) if liked is None else liked),
+    return {"id": post.pk, "warnings": warnings, "type": post.type, "config": post.text_card_config if include_config and post.type == "text_card" else None, "title": post.title, "description": post.description, "like_count": post.like_count, "liked": bool(getattr(post, 'viewer_liked', False) if liked is None else liked),
             "image": image, "thumbnail": image + '?thumbnail=1' if scan else post.thumbnail.url if post.thumbnail else image,
             "moderation_status": post.moderation_status, "scan_id": scan.pk if scan else None,
             "width": post.image_width or 480, "height": post.image_height or 640,

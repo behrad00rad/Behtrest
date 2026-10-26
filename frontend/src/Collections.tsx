@@ -21,12 +21,15 @@ import {
   Trash2,
   LayoutGrid,
   Globe,
+  Search as SearchIcon,
+  Share2,
 } from "lucide-react";
 import { request, upload } from "./api";
 import type { User } from "./api";
 import { useAuth } from "./auth";
 import { useDebouncedValue, usePage, useResource } from "./hooks";
-import { SearchField, ShareControl } from "./ProductUI";
+import { SearchField, ShareControl, notify } from "./ProductUI";
+import Owl from "./Owl";
 import { FollowControls } from "./Community";
 import type { Board, Post, Profile } from "./types";
 import {
@@ -43,14 +46,16 @@ function BoardsList({
   owner,
   own,
   changed,
+  filter,
 }: {
   owner: string;
   own: boolean;
   changed?: () => void;
+  filter?: string;
 }) {
   const [query, setQuery] = useState("");
   const [privacy, setPrivacy] = useState("all");
-  const settled = useDebouncedValue(query);
+  const settled = useDebouncedValue(filter ?? query);
   const page = usePage<Board>(
     `/boards/?owner=${encodeURIComponent(owner)}&q=${encodeURIComponent(settled)}&privacy=${privacy}`,
   );
@@ -70,7 +75,9 @@ function BoardsList({
         )}
       </div>
       <div className="product-toolbar">
-        <SearchField value={query} change={setQuery} label="Search boards" />
+        {filter === undefined && (
+          <SearchField value={query} change={setQuery} label="Search boards" />
+        )}
         {own && (
           <div className="tabs board-visibility">
             {["all", "public", "private"].map((value) => (
@@ -119,7 +126,7 @@ function BoardsList({
       )}
       {!page.loading && !page.error && !page.items.length && (
         <div className="empty-state">
-          <Bookmark size={32} />
+          <Owl state="sleep" />
           <h2>
             {query || privacy !== "all"
               ? "No matching boards"
@@ -150,7 +157,7 @@ function BoardsList({
                 className="secondary-button"
                 onClick={() => setCreating(true)}
               >
-                Create your first board <Plus size={16} />
+                Create a board <Plus size={16} />
               </button>
             )
           )}
@@ -371,170 +378,188 @@ export function ProfilePage() {
     `/profiles/${encodeURIComponent(username)}/`,
   );
   const [params, setParams] = useSearchParams();
+  const own = auth.user?.username === username;
   const tab =
     params.get("tab") === "boards"
       ? "boards"
-      : params.get("tab") === "liked" && auth.user?.username === username
+      : params.get("tab") === "liked" && own
         ? "liked"
         : "pins";
-  const [editing, setEditing] = useState(false);
-  const [pinQuery, setPinQuery] = useState("");
-  const settledPins = useDebouncedValue(pinQuery);
+  const [editing, setEditing] = useState(false),
+    [searching, setSearching] = useState(false),
+    [creating, setCreating] = useState(false);
+  const [query, setQuery] = useState("");
+  const settled = useDebouncedValue(query);
   const profile = resource.data;
-  if (resource.loading && !profile)
-    return (
-      <main className="loading-page" role="status">
-        Getting to know a curious mind…
-      </main>
-    );
   if (!profile)
     return (
-      <main className="loading-page">
+      <main className="loading-page" role="status">
+        <Owl state="think" />
         <ErrorNotice error={resource.error} />
-        <button className="secondary-button" onClick={resource.reload}>
-          Try again
-        </button>
+        {resource.error ? (
+          <button onClick={resource.reload}>Try again</button>
+        ) : (
+          "Opening profile..."
+        )}
       </main>
     );
-  const own = auth.user?.id === profile.id;
+  async function share() {
+    try {
+      await navigator.clipboard.writeText(
+        new URL(`/u/${profile!.username}`, location.origin).href,
+      );
+      notify("Profile link copied");
+    } catch {
+      notify("Copy the profile URL from your address bar.");
+    }
+  }
   return (
-    <main className="collection-page product-page profile-page">
+    <main className="collection-page product-page profile-page explore-page">
       <section className="profile-header">
         <Avatar author={profile} />
-        <h1>
-          {own && auth.user?.is_guest
-            ? "Guest"
-            : profile.display_name || profile.username}
-        </h1>
-        {!(own && auth.user?.is_guest) && (
+        <div className="profile-info">
+          <h1>
+            {profile.display_name || profile.username}
+            {(profile.is_guest || (own && auth.user?.is_guest)) && (
+              <span className="guest-badge">Guest</span>
+            )}
+          </h1>
           <p className="profile-username">@{profile.username}</p>
-        )}
-        {!own && (
-          <Link
-            className="secondary-button"
-            to={`/messages?to=${encodeURIComponent(profile.username)}`}
-          >
-            Message
-          </Link>
-        )}
-        {profile.bio && <p className="profile-bio">{profile.bio}</p>}
-        <p className="profile-counts">
-          {pluralize(profile.post_count, "pin")} <span>·</span>{" "}
-          {pluralize(profile.board_count, own ? "board" : "public board")}
-        </p>
-        {own && (
-          <button className="secondary-button" onClick={() => setEditing(true)}>
-            <Pencil size={15} />
-            Edit profile
-          </button>
-        )}
-      </section>
-      <FollowControls profile={profile} reload={resource.reload} />
-      {own && <Referrals />}
-      <div className="tabs profile-tabs">
-        {own && (
-          <button
-            className={tab === "liked" ? "active" : ""}
-            aria-pressed={tab === "liked"}
-            onClick={() => setParams({ tab: "liked" })}
-          >
-            Liked
-          </button>
-        )}
-        <button
-          className={tab === "pins" ? "active" : ""}
-          aria-pressed={tab === "pins"}
-          onClick={() => setParams({})}
-        >
-          Created pins
-        </button>
-        <button
-          className={tab === "boards" ? "active" : ""}
-          aria-pressed={tab === "boards"}
-          onClick={() => setParams({ tab: "boards" })}
-        >
-          Boards
-        </button>
-      </div>
-      {tab === "pins" && (
-        <div className="product-toolbar">
-          <SearchField
-            value={pinQuery}
-            change={setPinQuery}
-            label="Search profile pins"
-            placeholder="Find a created pin"
+          {profile.bio && <p className="profile-bio">{profile.bio}</p>}
+          <FollowControls
+            profile={profile}
+            reload={resource.reload}
+            pinCount={profile.post_count}
           />
-          {own && (
-            <Link className="secondary-button" to="/create">
-              <Plus size={16} />
-              Create pin
+        </div>
+        <div className="profile-actions">
+          {own ? (
+            <button
+              className="secondary-button"
+              onClick={() => setEditing(true)}
+            >
+              <Pencil size={16} />
+              Edit profile
+            </button>
+          ) : (
+            <Link
+              className="secondary-button"
+              to={`/messages?to=${encodeURIComponent(profile.username)}`}
+            >
+              Message
             </Link>
           )}
+          <button className="secondary-button" onClick={() => void share()}>
+            <Share2 size={16} />
+            Share profile
+          </button>
+        </div>
+      </section>
+      {own && <Referrals />}
+      <div className="profile-navigation">
+        <div className="tabs profile-tabs" aria-label="Profile content">
+          {[
+            ["pins", "Created"],
+            ["boards", "Boards"],
+            ...(own ? [["liked", "Liked"]] : []),
+          ].map(([value, label]) => (
+            <button
+              key={value}
+              className={tab === value ? "active" : ""}
+              aria-pressed={tab === value}
+              onClick={() => setParams(value === "pins" ? {} : { tab: value })}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <div className="profile-tools">
+          {tab !== "liked" && (
+            <button
+              className="icon-button"
+              aria-label="Search profile"
+              aria-expanded={searching}
+              onClick={() => {
+                setSearching(!searching);
+                if (searching) setQuery("");
+              }}
+            >
+              <SearchIcon size={20} />
+            </button>
+          )}
+          {own &&
+            (tab === "boards" ? (
+              <button
+                className="icon-button"
+                aria-label="Create board"
+                onClick={() => setCreating(true)}
+              >
+                <Plus size={20} />
+              </button>
+            ) : (
+              <Link
+                className="icon-button"
+                aria-label="Create pin"
+                to="/create"
+              >
+                <Plus size={20} />
+              </Link>
+            ))}
+        </div>
+      </div>
+      {searching && tab !== "liked" && (
+        <div className="profile-search">
+          <SearchField
+            value={query}
+            change={setQuery}
+            label="Search profile content"
+            placeholder={
+              tab === "boards" ? "Find a board" : "Find a created pin"
+            }
+          />
         </div>
       )}
-      {tab === "liked" ? (
-        <PostGrid
-          endpoint={`/profiles/${encodeURIComponent(profile.username)}/liked/`}
-          empty="No liked pins yet"
-          emptyDescription="Tap a heart on a pin to keep it here."
-          emptyAction={
-            <Link className="secondary-button" to="/">
-              Explore pins
-            </Link>
-          }
-        />
-      ) : tab === "pins" ? (
-        <PostGrid
-          endpoint={`/feed/?owner=${encodeURIComponent(profile.username)}&q=${encodeURIComponent(settledPins)}`}
-          empty={
-            pinQuery
-              ? "No matching pins"
-              : own
-                ? "Create your first pin"
-                : "No pins here just yet."
-          }
-          emptyDescription={
-            pinQuery
-              ? "Try another word or clear the search."
-              : own
-                ? "Upload an image and share an idea worth keeping."
-                : "Come back to see what they share next."
-          }
-          emptyAction={
-            pinQuery ? (
-              <button
-                className="secondary-button"
-                onClick={() => setPinQuery("")}
-              >
-                Clear pin search
-              </button>
-            ) : own ? (
-              <Link className="secondary-button" to="/create">
-                Create pin <Plus size={16} />
-              </Link>
-            ) : (
-              <Link className="secondary-button" to="/">
-                Explore pins
-              </Link>
-            )
-          }
-        />
-      ) : (
+      {tab === "boards" ? (
         <BoardsList
+          key={profile.board_count}
           owner={profile.username}
           own={own}
           changed={resource.reload}
+          filter={query}
         />
-      )}{" "}
-      {own && !profile.post_count && (
-        <div className="empty-profile-actions">
-          <Link className="secondary-button" to="/">
-            Save your first pin
-          </Link>
-          <Link className="secondary-button" to="/boards">
-            Create a board
-          </Link>
-        </div>
+      ) : (
+        <PostGrid
+          key={tab}
+          feedFirst
+          emptyOwl
+          endpoint={
+            tab === "liked"
+              ? `/profiles/${encodeURIComponent(profile.username)}/liked/`
+              : `/feed/?owner=${encodeURIComponent(profile.username)}&q=${encodeURIComponent(settled)}`
+          }
+          empty={
+            query
+              ? "No matching pins"
+              : tab === "liked"
+                ? "A little room for what you love."
+                : "Share your first little thing"
+          }
+          emptyDescription={
+            tab === "liked"
+              ? "Like a pin to keep it here."
+              : "Your next little idea belongs here."
+          }
+          emptyAction={
+            <Link
+              className="secondary-button"
+              to={tab === "liked" || !own ? "/" : "/create"}
+            >
+              {tab === "liked" || !own
+                ? "Explore pins"
+                : "Share your first little thing"}
+            </Link>
+          }
+        />
       )}
       {editing && (
         <EditProfile
@@ -542,6 +567,16 @@ export function ProfilePage() {
           close={() => setEditing(false)}
           done={resource.reload}
         />
+      )}
+      {creating && (
+        <Modal title="Create a board" close={() => setCreating(false)}>
+          <BoardForm
+            done={() => {
+              setCreating(false);
+              resource.reload();
+            }}
+          />
+        </Modal>
       )}
     </main>
   );

@@ -20,6 +20,9 @@ class TimestampedModel(models.Model):
 
 
 class Post(TimestampedModel):
+    type = models.CharField(max_length=16, default="pin", choices=[("pin", "Pin"), ("text_card", "Words")])
+    text_card_config = models.JSONField(default=dict, blank=True)
+    text_content = models.CharField(max_length=280, blank=True)
     allow_download = models.BooleanField(default=True)
     like_count = models.PositiveIntegerField(default=0)
     moderation_status = models.CharField(max_length=12, default="approved", db_index=True)

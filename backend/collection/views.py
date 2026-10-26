@@ -112,7 +112,7 @@ def feed(request):
     if owner and request.user.is_authenticated and owner == request.user.username and following == '0':
         query = Post.objects.filter(owner__is_active=True, is_hidden=False).filter(Q(moderation_status='approved') | Q(owner=request.user)).select_related('owner__profile').prefetch_related('tags')
     if text:
-        query = query.filter(Q(title__icontains=text) | Q(description__icontains=text) | Q(tags__name__icontains=text) | Q(owner__username__icontains=text) | Q(owner__profile__display_name__icontains=text)).distinct()
+        query = query.filter(Q(title__icontains=text) | Q(text_content__icontains=text) | Q(description__icontains=text) | Q(tags__name__icontains=text) | Q(owner__username__icontains=text) | Q(owner__profile__display_name__icontains=text)).distinct()
     if tag:
         query = query.filter(tags__name=tag)
     if owner:
@@ -133,7 +133,12 @@ def feed(request):
 @endpoint(['POST'], authenticated=True, rate=(30, 60), multipart=True)
 def create_post(request):
     fields = ('title', 'description', 'alt_text', 'source_url', 'allow_download')
-    validate_keys(request.data, (*fields, 'tags'))
+    card = request.data.get('type', 'pin') == 'text_card'
+    if request.data.get('type', 'pin') not in ('pin', 'text_card'):
+        raise ApiError('invalid_input', 'Choose Pin or Words.')
+    validate_keys(request.data, (*fields, 'tags', 'type', 'config'))
+    if not card and 'config' in request.data:
+        raise ApiError('invalid_input', 'Configuration is only supported for Words.')
     if set(request.FILES) != {'image'} or len(request.FILES.getlist('image')) != 1:
         raise ApiError('invalid_image', 'Choose exactly one image.')
     if 'allow_download' in request.data and request.content_type == 'multipart/form-data':
@@ -141,7 +146,11 @@ def create_post(request):
         if value not in ('true', 'false'):
             raise ApiError('invalid_input', 'allow_download must be true or false.')
         request.data['allow_download'] = value == 'true'
-    post = apply_form(Post(owner=request.user), request.data, PostMetadataForm, fields)
+    post = Post(owner=request.user)
+    if card:
+        from .words import apply_card
+        apply_card(post, request.data, request.user, creating=True)
+    post = apply_form(post, request.data, PostMetadataForm, fields)
     tags = tags_from_input(request.data.get('tags', ''))
     prepared = prepare_image(request.FILES['image'])
     names, width, height = ([], prepared[2], prepared[3]) if settings.IMAGE_MODERATION_ENABLED else store_images(prepared, request.user.pk)
@@ -162,7 +171,7 @@ def create_post(request):
     except Exception:
         delete_files(names)
         raise
-    return success(post_data(post), 201)
+    return success(post_data(post, include_config=True), 201)
 
 
 @endpoint(['GET', 'PATCH', 'DELETE'], rate=(30, 60))
@@ -171,7 +180,7 @@ def post_owner_actions(request, pk):
     if post.moderation_status != 'approved' and post.owner_id != request.user.pk: raise Http404
     if request.method == 'GET':
         from .models import PinLike
-        return success(post_data(post, liked=request.user.is_authenticated and PinLike.objects.filter(user=request.user, pin=post).exists()))
+        return success(post_data(post, liked=request.user.is_authenticated and PinLike.objects.filter(user=request.user, pin=post).exists(), include_config=post.owner_id == request.user.pk))
     require_user(request)
     if post.owner_id != request.user.pk:
         raise Http404
@@ -344,7 +353,8 @@ def profile_detail(request, username):
     board_query = user.boards.all()
     if not request.user.is_authenticated or request.user.pk != user.pk:
         board_query = board_query.filter(is_private=False)
-    return success({**author_data(user), 'bio': user.profile.bio, 'post_count': user.posts.filter(is_hidden=False, moderation_status='approved').count(), 'board_count': board_query.count(), 'follower_count': user.follower_edges.filter(follower__is_active=True).count(), 'following_count': user.following_edges.filter(target__is_active=True).count(), 'is_following': request.user.is_authenticated and Follow.objects.filter(follower=request.user, target=user).exists()})
+    from accounts.preview import is_guest_user
+    return success({**author_data(user), 'is_guest': is_guest_user(user), 'bio': user.profile.bio, 'post_count': user.posts.filter(is_hidden=False, moderation_status='approved').count(), 'board_count': board_query.count(), 'follower_count': user.follower_edges.filter(follower__is_active=True).count(), 'following_count': user.following_edges.filter(target__is_active=True).count(), 'is_following': request.user.is_authenticated and Follow.objects.filter(follower=request.user, target=user).exists()})
 
 
 @endpoint(['POST'], authenticated=True, rate=(30, 60), multipart=True)
@@ -402,3 +412,47 @@ def people_search(request):
 @endpoint(['GET'])
 def tag_list(request):
     return success({'items': list(Tag.objects.filter(posts__owner__is_active=True, posts__is_hidden=False, posts__moderation_status='approved').distinct().order_by('name').values_list('name', flat=True)[:100])})
+
+
+@endpoint(['POST'], authenticated=True, rate=(20, 60), multipart=True)
+def update_text_card(request, pk):
+    from .words import apply_card
+    fields = ('title', 'description', 'alt_text', 'source_url', 'allow_download')
+    validate_keys(request.data, (*fields, 'tags', 'type', 'config'))
+    if set(request.FILES) != {'image'} or len(request.FILES.getlist('image')) != 1:
+        raise ApiError('invalid_image', 'Choose exactly one rendered image.')
+    if 'allow_download' in request.data:
+        if request.data['allow_download'] not in ('true', 'false'):
+            raise ApiError('invalid_input', 'allow_download must be true or false.')
+        request.data['allow_download'] = request.data['allow_download'] == 'true'
+    tags = tags_from_input(request.data.get('tags', ''))
+    prepared = prepare_image(request.FILES['image'])
+    names = []
+    try:
+        with transaction.atomic():
+            post = get_object_or_404(Post.objects.select_for_update(), pk=pk, owner=request.user, type='text_card', is_hidden=False)
+            previous = [post.image.name, post.thumbnail.name]
+            apply_card(post, request.data, request.user)
+            apply_form(post, request.data, PostMetadataForm, fields)
+            if settings.IMAGE_MODERATION_ENABLED:
+                from .image_moderation import enqueue
+                from .models import ImageScan
+                ImageScan.objects.filter(post=post).delete()
+                post.image, post.thumbnail, post.moderation_status = '', '', 'pending'
+                post.image_width, post.image_height = prepared[2:]
+                post.full_clean(exclude=['image', 'thumbnail', 'tags'])
+                post.save()
+                enqueue(request.user, prepared, post=post)
+            else:
+                names, width, height = store_images(prepared, request.user.pk)
+                post.image, post.thumbnail, post.image_width, post.image_height = *names, width, height
+                post.moderation_status = 'approved'
+                post.full_clean(exclude=['tags'])
+                post.save()
+            assign_tags(post, tags)
+            transaction.on_commit(lambda: delete_files(previous))
+    except Exception:
+        delete_files(names)
+        raise
+    post.refresh_from_db()
+    return success(post_data(post, include_config=True))

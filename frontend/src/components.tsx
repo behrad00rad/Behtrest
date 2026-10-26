@@ -369,6 +369,7 @@ export function PostGrid({
   emptyAction,
   feedFirst = false,
   bounded = false,
+  emptyOwl = false,
 }: {
   endpoint: string;
   empty?: string;
@@ -377,6 +378,7 @@ export function PostGrid({
   emptyAction?: ReactNode;
   feedFirst?: boolean;
   bounded?: boolean;
+  emptyOwl?: boolean;
 }) {
   const page = usePage<Post>(endpoint, feedFirst, bounded);
   const capped = bounded && page.items.length >= 120;
@@ -645,8 +647,16 @@ export function PostGrid({
       )}
       {!page.loading && !page.error && !page.items.length && (
         <div className="empty-state">
-          {feedFirst ? <Owl state="sleep" /> : <Bookmark size={32} />}
-          <h2>{feedFirst ? "Nothing more tonight. Stay curious." : empty}</h2>
+          {feedFirst || emptyOwl ? (
+            <Owl state="sleep" />
+          ) : (
+            <Bookmark size={32} />
+          )}
+          <h2>
+            {feedFirst && !emptyOwl
+              ? "Nothing more tonight. Stay curious."
+              : empty}
+          </h2>
           <p>{emptyDescription}</p>
           {emptyAction || (
             <Link className="text-link" to="/create">

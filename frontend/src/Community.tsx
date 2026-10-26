@@ -200,9 +200,11 @@ function PeopleList({
 export function FollowControls({
   profile,
   reload,
+  pinCount,
 }: {
   profile: Profile;
   reload: () => void;
+  pinCount?: number;
 }) {
   const { user } = useAuth();
   const [busy, setBusy] = useState(false),
@@ -230,9 +232,16 @@ export function FollowControls({
         <button onClick={() => setList("followers")}>
           {pluralize(profile.follower_count || 0, "follower")}
         </button>
+        <span aria-hidden="true">{String.fromCharCode(183)}</span>
         <button onClick={() => setList("following")}>
           {profile.following_count || 0} following
         </button>
+        {pinCount !== undefined && (
+          <>
+            <span aria-hidden="true">{String.fromCharCode(183)}</span>
+            <span>{pluralize(pinCount, "pin")}</span>
+          </>
+        )}
       </div>
       {user?.id !== profile.id && (
         <div className="follow-actions">

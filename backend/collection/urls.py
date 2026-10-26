@@ -3,6 +3,7 @@ from . import views
 from . import pins
 
 urlpatterns = [
+    path('posts/<int:pk>/text-card/', views.update_text_card),
     path('pins/<int:pk>/download', pins.download),
     path('pins/<int:pk>/download/', pins.download),
     path('comments/<int:pk>/likes/', pins.comment_like),

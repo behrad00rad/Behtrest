@@ -1,0 +1,244 @@
+.profile-page .profile-header {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 24px;
+  max-width: 1100px;
+  margin: 24px auto;
+  padding: 24px 0;
+  text-align: left;
+  background: transparent;
+  border: 0;
+}
+.profile-page .profile-header > .avatar {
+  width: 96px;
+  height: 96px;
+  min-width: 96px;
+  font-size: 32px;
+  border-radius: 50%;
+  outline: 2px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  outline-offset: 4px;
+}
+.profile-page .profile-header h1 {
+  font-size: 28px;
+  line-height: 1.25;
+  margin: 0 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.profile-header .guest-badge {
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 4px 8px;
+  background: var(--surface);
+  border-radius: 8px;
+}
+.profile-page .profile-username {
+  font-size: 14px;
+  color: var(--text-muted);
+  margin: 0 0 8px;
+}
+.profile-page .profile-bio {
+  font-size: 15px;
+  line-height: 1.5;
+  margin: 0 0 16px;
+  max-width: 600px;
+  overflow-wrap: anywhere;
+}
+.profile-page .follow-controls {
+  margin: 0;
+  align-items: start;
+  gap: 8px;
+}
+.profile-page .follow-counts {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0;
+  font-size: 14px;
+}
+.profile-page .follow-counts button {
+  min-height: 44px;
+  font-size: 14px;
+  padding: 0;
+  background: transparent;
+  color: var(--text-primary);
+}
+.profile-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.profile-actions button,
+.profile-actions a {
+  min-height: 44px;
+  font-size: 14px;
+}
+.profile-invites {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin: 0 auto 24px;
+  font-size: 14px;
+}
+.profile-invites .pin-popover > button {
+  font-size: 14px;
+  padding: 8px;
+  min-height: 44px;
+  width: auto;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.invite-code-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px;
+  background: var(--surface);
+  border-radius: 8px;
+}
+.invite-code-row code {
+  font-family: monospace;
+  overflow-wrap: anywhere;
+  flex: 1;
+  font-size: 14px;
+}
+.invite-code-row button {
+  min-width: 44px;
+  min-height: 44px;
+}
+.profile-invites .pin-popover-panel p {
+  font-size: 14px;
+  line-height: 1.5;
+}
+.profile-navigation {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 16px;
+  margin: 0 0 16px;
+}
+.profile-page .profile-tabs {
+  display: flex;
+  gap: 16px;
+  margin: 0;
+  padding: 0;
+}
+.profile-page .profile-tabs button {
+  min-height: 44px;
+  border-radius: 0;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 15px;
+  padding: 8px;
+}
+.profile-page .profile-tabs button.active {
+  border-bottom-color: var(--accent);
+  color: var(--text-primary);
+}
+.profile-tabs button:hover {
+  color: var(--text-primary);
+}
+.profile-tabs button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
+}
+.profile-tools {
+  display: flex;
+  gap: 8px;
+}
+.profile-tools .icon-button {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+}
+.profile-search {
+  max-width: 600px;
+  margin: 0 auto 16px;
+}
+.profile-page > .section-heading {
+  display: none;
+}
+.profile-page .empty-state {
+  padding: 32px 16px;
+}
+.profile-page .empty-state .owl {
+  width: 96px;
+  height: 96px;
+}
+@media (max-width: 767px) {
+  .profile-page .profile-header {
+    grid-template-columns: minmax(0, 1fr);
+    justify-items: center;
+    gap: 16px;
+    margin: 16px auto;
+    padding: 16px 0;
+    text-align: center;
+  }
+  .profile-info {
+    min-width: 0;
+  }
+  .profile-page .profile-header h1 {
+    justify-content: center;
+    font-size: 24px;
+  }
+  .profile-page .follow-controls {
+    align-items: center;
+  }
+  .profile-page .follow-counts {
+    justify-content: center;
+    gap: 8px;
+    font-size: 12px;
+  }
+  .profile-page .follow-counts button {
+    font-size: 12px;
+  }
+  .profile-actions {
+    justify-content: center;
+  }
+  .profile-navigation {
+    gap: 8px;
+  }
+  .profile-page .profile-tabs {
+    gap: 8px;
+  }
+  .profile-page .profile-tabs button {
+    padding: 8px;
+    font-size: 14px;
+  }
+  .profile-tools {
+    gap: 0;
+  }
+  .profile-invites {
+    margin-bottom: 16px;
+  }
+  .profile-invites .pin-popover-panel {
+    border-radius: 16px;
+  }
+  .profile-page .boards-grid {
+    gap: 16px;
+  }
+}
+.profile-page .profile-header > .avatar {
+  grid-column: auto;
+  grid-row: auto;
+}
+.app-shell .profile-page .profile-tabs button {
+  border-radius: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  border: 0 !important;
+  border-bottom: 2px solid transparent !important;
+}
+.app-shell .profile-page .profile-tabs button.active {
+  border-bottom-color: var(--accent) !important;
+}

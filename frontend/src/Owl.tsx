@@ -12,10 +12,12 @@ export default function Owl({
   state = "idle",
   accessory = "none",
   followCursor = false,
+  gaze,
 }: {
   state?: OwlState;
   accessory?: OwlAccessory;
   followCursor?: boolean;
+  gaze?: { x: number; y: number };
 }) {
   const svg = useRef<SVGSVGElement>(null);
   const [blink, setBlink] = useState(false);
@@ -79,6 +81,12 @@ export default function Owl({
       window.removeEventListener("pointermove", move);
     };
   }, [followCursor]);
+  useEffect(() => {
+    if (!gaze || reducedMotion()) return;
+    svg.current?.querySelectorAll<SVGElement>(".owl-pupil").forEach((p) => {
+      p.style.transform = `translate(${Math.max(-1, Math.min(1, gaze.x)) * 3}px, ${Math.max(-1, Math.min(1, gaze.y)) * 2}px)`;
+    });
+  }, [gaze?.x, gaze?.y]);
   return (
     <svg
       ref={svg}

@@ -1,4 +1,6 @@
-import { useEffect, useLayoutEffect, useId, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { PostFields } from "./PinFields";
+import WordsEditor from "./Words";
 import { ImageCheck } from "./ImageCheck";
 import type { FormEvent } from "react";
 import {
@@ -337,103 +339,40 @@ function People({ query }: { query: string }) {
   );
 }
 
-export function PostFields({
-  post,
-  errors = {},
-}: {
-  post?: Post;
-  errors?: Record<string, string[]>;
-}) {
-  const id = useId();
-  const feedback = (name: string) =>
-    errors[name] && (
-      <span id={`${id}-${name}`} className="field-error">
-        {errors[name].join(" ")}
-      </span>
-    );
-  const validation = (name: string) => ({
-    "aria-invalid": Boolean(errors[name]),
-    "aria-describedby": errors[name] ? `${id}-${name}` : undefined,
-  });
+export function CreatePost() {
+  const [params, setParams] = useSearchParams();
+  const words = params.get("mode") === "words";
   return (
     <>
-      <label className="field">
-        Title
-        <input
-          name="title"
-          {...validation("title")}
-          required
-          maxLength={200}
-          defaultValue={post?.title || ""}
-          placeholder="Give your idea a name"
-        />
-        {feedback("title")}
-      </label>
-      <label className="field">
-        Description
-        <textarea
-          name="description"
-          {...validation("description")}
-          maxLength={5000}
-          defaultValue={post?.description || ""}
-          placeholder="What caught your eye?"
-          rows={4}
-        />
-        {feedback("description")}
-      </label>
-      <label className="field">
-        Tags
-        <input
-          name="tags"
-          {...validation("tags")}
-          maxLength={400}
-          defaultValue={post?.tags.join(", ") || ""}
-          placeholder="blue, architecture, nature"
-        />
-        <small>Up to 8 tags, separated by commas.</small>
-        {feedback("tags")}
-      </label>
-      <label className="field">
-        Source link <span className="optional">optional</span>
-        <input
-          name="source_url"
-          {...validation("source_url")}
-          type="url"
-          maxLength={500}
-          defaultValue={post?.source_url || ""}
-          placeholder="https://..."
-        />
-        {feedback("source_url")}
-      </label>
-      <label className="checkbox-field">
-        <input
-          type="checkbox"
-          name="allow_download"
-          defaultChecked={post?.allow_download !== false}
-        />
-        <span>
-          Allow downloads<small>Let people download the full-size image.</small>
-        </span>
-      </label>
-      <label className="field">
-        Alt text <span className="optional">recommended</span>
-        <input
-          name="alt_text"
-          {...validation("alt_text")}
-          maxLength={500}
-          defaultValue={post?.alt_text || ""}
-          placeholder="Describe the image for someone who cannot see it"
-        />
-        <small>
-          A short description helps people using screen readers enjoy your pin.
-        </small>
-        {feedback("alt_text")}
-      </label>
+      <div
+        className="create-switch tabs"
+        role="group"
+        aria-label="Create format"
+      >
+        <button
+          aria-pressed={!words}
+          className={!words ? "active" : ""}
+          onClick={() => {
+            if (words) setParams({});
+          }}
+        >
+          Pin
+        </button>
+        <button
+          aria-pressed={words}
+          className={words ? "active" : ""}
+          onClick={() => {
+            if (!words) setParams({ mode: "words" });
+          }}
+        >
+          Words
+        </button>
+      </div>
+      {words ? <WordsEditor /> : <ImageCreatePost />}
     </>
   );
 }
-
-export function CreatePost() {
+function ImageCreatePost() {
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState("");
   const [error, setError] = useState("");
@@ -1181,7 +1120,9 @@ export function PostDetail({ onBack }: { onBack?: () => void } = {}) {
                       onClick={() => {
                         setMenuOpen(false);
                         setError("");
-                        setEditing(true);
+                        if (post.type === "text_card")
+                          navigate(`/create?mode=words&edit=${post.id}`);
+                        else setEditing(true);
                       }}
                     >
                       <Pencil size={14} />

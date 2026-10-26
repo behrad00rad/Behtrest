@@ -1,3 +1,4 @@
+import type { WordsConfig } from "./wordsCanvas";
 export type Author = {
   id: number;
   username: string;
@@ -5,6 +6,9 @@ export type Author = {
   avatar: string | null;
 };
 export type Post = {
+  type?: "pin" | "text_card";
+  config?: WordsConfig | null;
+  warnings?: string[];
   allow_download?: boolean;
   liked?: boolean;
   like_count?: number;
@@ -43,6 +47,7 @@ export type Board = {
   post_count: number;
 };
 export type Profile = Author & {
+  is_guest?: boolean;
   follower_count: number;
   following_count: number;
   is_following: boolean;

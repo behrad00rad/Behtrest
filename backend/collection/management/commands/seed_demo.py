@@ -95,4 +95,4 @@ class Command(BaseCommand):
             Board.objects.get_or_create(owner=owner, name='Private sketches', defaults={'is_private': True})
             for post in Post.objects.filter(owner=owner):
                 SavedPost.objects.get_or_create(board=board, post=post)
-                Comment.objects.get_or_create(author=users[1] if owner == users[0] else users[0], post=post, text='A little inspiration for the next project.')
+                Comment.objects.get_or_create(author=users[1] if owner == users[0] else users[0], post=post, text=['The warm colors make this feel really inviting.', 'Saving this palette for my next sketch.', 'I like the way the shapes balance each other.'][post.pk % 3])

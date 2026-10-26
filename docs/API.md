@@ -3,7 +3,7 @@
 Following, activity notifications, reports, and moderation endpoints are documented in [COMMUNITY.md](COMMUNITY.md).
 Background image scan, private preview, appeal, and processing-queue endpoints are documented in [IMAGE-MODERATION.md](IMAGE-MODERATION.md).
 
-All paths below are under `/api/`. Requests and responses use JSON, except image uploads which use multipart form data. Success: `{"data": ...}`. Errors: `{"error":{"code":"...","message":"...","fields":{"field":["message"]}}}`; `fields` is included only when applicable.
+All paths below are under `/api/`. Requests and responses use JSON, except image uploads which use multipart form data and pin downloads which return an attachment stream. Success: `{"data": ...}`. Errors: `{"error":{"code":"...","message":"...","fields":{"field":["message"]}}}`; `fields` is included only when applicable.
 
 ## Browser authentication
 
@@ -35,7 +35,7 @@ Writes require a session and CSRF token. Public collection reads expose only act
 
 | Method | Path | Editable fields / behavior |
 | --- | --- | --- |
-| GET, PATCH, DELETE | `posts/<id>/` | Public read; owner writes: title, description, alt_text, source_url, tags |
+| GET, PATCH, DELETE | `posts/<id>/` | Public read; owner writes: title, description, alt_text, source_url, tags, allow_download (JSON boolean) |
 | PATCH, DELETE | `comments/<id>/` | Author only; text |
 | GET | `boards/<id>/` | Public board metadata, or private metadata for its owner |
 | PATCH, DELETE | `boards/<id>/manage/` | Owner only; name, description, is_private (JSON boolean), cover_post_id (saved pin ID or null) |
@@ -87,3 +87,18 @@ Vite proxies `/api/`, `/admin/`, `/static/`, `/media/`, and WebSockets at `/ws/`
 Messaging endpoints live under `/api/chat/`: conversations, group members, messages, receipts, private attachment upload/download, settings, blocks, reports, and unread summary. Writes are CSRF protected. Messages/reactions allow 60 writes/minute, receipts 120, image uploads 15, reports 10/hour; other chat writes allow 30/minute per IP/endpoint. WebSocket connection attempts allow 20/minute per authenticated user. See [MESSAGING.md](MESSAGING.md) for membership, retry, and privacy behavior.
 
 The portable implementation is described in [DEPLOYMENT.md](DEPLOYMENT.md). Readiness checks database access and the migrations table; it does not replace storage, email, or full journey monitoring.
+
+
+## Pin detail actions (October 26, 2026)
+
+| Method | Path | Behavior |
+| --- | --- | --- |
+| GET | `pins/<id>/download` (also trailing slash) | Stored full-size image as an attachment; slugified title plus stored extension; private/no-store; 30 requests/minute per client IP |
+| GET | `pins/<id>/metadata/` | Public approved pin metadata used for initial-HTML OG/Twitter tags; hidden/pending/inactive-owner pins return 404 |
+| POST, DELETE | `comments/<id>/likes/` | Authenticated, CSRF-protected, idempotent like/unlike; returns liked and like_count; 60 writes/minute per client IP |
+
+Pins serialize `allow_download`, default true. Multipart creation accepts `allow_download=true` or `false`; omission retains true. Owner JSON edits accept a boolean, not a string. Disabled downloads, hidden/pending pins and blocked-owner visibility failures return 404 from the download endpoint. The downloaded image is the normalized full-size stored file, not the thumbnail or discarded raw upload. ASGI downloads yield bounded 64 KiB chunks.
+
+Comments are returned latest-first, with `total` on the page and `liked`/`like_count` on each item. Text is trimmed, requires at least two characters, and identical comments from the same account are rejected for 60 seconds. Board-save responses include `created`: Undo is offered only when this save created a row, so it cannot delete a save that already existed.
+
+`GET /pin/<id>` is an HTML route outside `/api/`; see [deployment integration](DEPLOYMENT.md) and [pin detail behavior](PIN-DETAIL.md).

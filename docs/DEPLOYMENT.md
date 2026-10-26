@@ -124,3 +124,12 @@ The CI `containers` job builds both images, runs production checks/migrations/co
 To reproduce on a disposable Docker host, run `python3 scripts/prepare_container_smoke.py` in a clean checkout, then the container job's commands in `.github/workflows/verify.yml`. That script refuses to overwrite `deploy/.env`. Do not use its synthetic environment for public hosting.
 
 References: [Django deployment checklist](https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/), [Django proxy HTTPS settings](https://docs.djangoproject.com/en/5.2/ref/settings/#secure-proxy-ssl-header), [Caddy reverse proxy](https://caddyserver.com/docs/caddyfile/directives/reverse_proxy).
+
+
+## Pin detail links and migration 0010
+
+The new pin actions require collection migration `0010_post_allow_download_commentlike` (download permission and unique per-account comment likes). Apply migrations through the existing controlled upgrade procedure before starting this revision. Only the isolated local preview has been migrated for this feature verification; no production migration or release is claimed.
+
+Caddy now forwards `/pin/*` to Django as well as API/admin/WebSocket paths. Django injects escaped OG/Twitter metadata and canonical links into the built React shell before returning a public pin page. The backend Dockerfile builds and packages the same frontend source under `/app/frontend-dist`; `BEHTREST_FRONTEND_DIST` selects this directory. The web image continues to serve `/assets/*` and media. Rebuild backend and web from the same revision to keep asset hashes aligned. A missing frontend shell returns 503, and unpublished/hidden pins return 404.
+
+Local Vite development injects equivalent metadata for direct pin requests. In-app navigation updates metadata on the client. Fresh container builds, public crawler previews, production routing and physical-device Web Share remain unverified for this revision; the earlier successful CI run does not validate these new changes.

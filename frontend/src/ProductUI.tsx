@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { createPortal } from "react-dom";
 import {
   Check,
   ChevronLeft,
@@ -13,20 +14,34 @@ import {
   X,
 } from "lucide-react";
 
-export function notify(message: string) {
+type Notice = {
+  message: string;
+  actions?: { label: string; onClick: () => void }[];
+};
+
+export function notify(message: string | Notice) {
   window.dispatchEvent(new CustomEvent("behtrest-toast", { detail: message }));
 }
 
 export function ToastHost() {
-  const [notice, setNotice] = useState("");
+  const [notice, setNotice] = useState<Notice | null>(null);
+  const [target, setTarget] = useState<Element | null>(null);
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
     const show = (event: Event) => {
-      if (!(event instanceof CustomEvent) || typeof event.detail !== "string")
-        return;
-      setNotice(event.detail);
+      if (!(event instanceof CustomEvent)) return;
+      const notice: Notice =
+        typeof event.detail === "string"
+          ? { message: event.detail }
+          : event.detail;
+      if (!notice || typeof notice.message !== "string") return;
+      setTarget([...document.querySelectorAll("dialog[open]")].at(-1) || null);
+      setNotice(notice);
       clearTimeout(timer);
-      timer = setTimeout(() => setNotice(""), 5000);
+      timer = setTimeout(
+        () => setNotice(null),
+        notice.actions?.length ? 12000 : 5000,
+      );
     };
     window.addEventListener("behtrest-toast", show);
     return () => {
@@ -34,16 +49,28 @@ export function ToastHost() {
       clearTimeout(timer);
     };
   }, []);
-  return (
+  const content = (
     <div className="toast-host" role="status" aria-live="polite">
       {notice && (
         <div className="toast">
           <Check size={18} />
-          <span>{notice}</span>
+          <span>{notice.message}</span>
+          {notice.actions?.map((action) => (
+            <button
+              type="button"
+              key={action.label}
+              onClick={() => {
+                setNotice(null);
+                action.onClick();
+              }}
+            >
+              {action.label}
+            </button>
+          ))}
           <button
             type="button"
             aria-label="Dismiss message"
-            onClick={() => setNotice("")}
+            onClick={() => setNotice(null)}
           >
             <X size={16} />
           </button>
@@ -51,6 +78,7 @@ export function ToastHost() {
       )}
     </div>
   );
+  return target?.isConnected ? createPortal(content, target) : content;
 }
 
 export function TagScroller({
@@ -207,7 +235,23 @@ export function ShareControl({
     <details
       className={`product-share ${compact ? "pin-more" : ""}`}
       onKeyDown={(event) => {
+        if (event.key === "Tab" && event.currentTarget.open) {
+          const items = [
+            ...event.currentTarget.querySelectorAll<HTMLElement>(
+              "summary, a[href], button:not(:disabled), input",
+            ),
+          ];
+          const index = items.indexOf(document.activeElement as HTMLElement);
+          if (event.shiftKey && index === 0) {
+            event.preventDefault();
+            items.at(-1)?.focus();
+          } else if (!event.shiftKey && index === items.length - 1) {
+            event.preventDefault();
+            items[0]?.focus();
+          }
+        }
         if (event.key === "Escape") {
+          event.stopPropagation();
           event.currentTarget.open = false;
           event.currentTarget.querySelector("summary")?.focus();
         }

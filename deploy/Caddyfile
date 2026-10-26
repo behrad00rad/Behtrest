@@ -11,7 +11,7 @@
     request_body {
         max_size 9MB
     }
-    @backend path /api /api/* /admin /admin/* /ws /ws/*
+    @backend path /api /api/* /admin /admin/* /ws /ws/* /pin/*
     handle @backend {
         reverse_proxy backend:8000 {
             header_up X-Behtrest-Client-IP {remote_host}

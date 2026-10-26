@@ -12,6 +12,8 @@ Connecting React, a Python API, a database, accounts, image uploads, and comment
 
 ## History
 
+- **October 26, 2026, pin details:** completed mobile-first pin details and Discover polish, comments before bounded related pins, download permissions, board picker with safe Undo, share/follow/comment actions, keyboard shortcuts, and initial-HTML social metadata. See [pin detail behavior](docs/PIN-DETAIL.md), [case study](docs/CASE-STUDY.md), and [verification](docs/VERIFICATION.md). These are locally verified features, not a public deployment.
+
 - **October 10, 2026:** renamed the current app to **Behtrest**. The original project was named Bintrest; its original README and source remain preserved.
 - **October 10, 2026, community:** added follows and a following feed, activity preferences/unread controls, and a report queue with reversible moderation decisions and audit history.
 - **October 26, 2026, discovery and preview:** added a separate guest playground, account-based interests and personalized pin discovery, likes and hide controls, related pins, and a feed-first interface with reduced-motion-aware owl details. The preview and ranking are local; no public deployment is claimed.

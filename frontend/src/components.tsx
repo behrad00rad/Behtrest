@@ -78,6 +78,7 @@ export function Modal({
       aria-modal="true"
       aria-labelledby={id}
       onCancel={(event) => {
+        event.stopPropagation();
         event.preventDefault();
         if (!busy) close();
       }}
@@ -367,6 +368,7 @@ export function PostGrid({
   emptyDescription = "Good collections start with a little curiosity.",
   emptyAction,
   feedFirst = false,
+  bounded = false,
 }: {
   endpoint: string;
   empty?: string;
@@ -374,8 +376,11 @@ export function PostGrid({
   emptyDescription?: string;
   emptyAction?: ReactNode;
   feedFirst?: boolean;
+  bounded?: boolean;
 }) {
-  const page = usePage<Post>(endpoint, feedFirst);
+  const page = usePage<Post>(endpoint, feedFirst, bounded);
+  const capped = bounded && page.items.length >= 120;
+  const automatic = !bounded || page.items.length < 60;
   const [saving, setSaving] = useState<Post | null>(null);
   const [hidden, setHidden] = useState<number[]>([]);
   useEffect(() => {
@@ -456,7 +461,8 @@ export function PostGrid({
     }
   }
   useEffect(() => {
-    if (!page.cursor || page.loading || page.error) return;
+    if (!page.cursor || page.loading || page.error || capped || !automatic)
+      return;
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting) void page.loadMore();
@@ -465,7 +471,7 @@ export function PostGrid({
     );
     if (sentinel.current) observer.observe(sentinel.current);
     return () => observer.disconnect();
-  }, [page.cursor, page.loading, page.error, page.loadMore]);
+  }, [page.cursor, page.loading, page.error, page.loadMore, capped, automatic]);
   return (
     <>
       <div className="pin-grid" ref={grid} aria-busy={page.loading}>
@@ -482,137 +488,141 @@ export function PostGrid({
             tabIndex={feedFirst ? 0 : undefined}
             aria-label={feedFirst ? post.title : undefined}
           >
-            <div className="pin-image">
-              <Link
-                className="pin-open"
-                to={`/pin/${post.id}`}
-                state={pinState(post)}
-                onClick={(event) => {
-                  if (
-                    !feedFirst ||
-                    event.ctrlKey ||
-                    event.metaKey ||
-                    event.shiftKey ||
-                    event.altKey
-                  )
-                    return;
-                  event.preventDefault();
-                  const state = pinState(post);
-                  if (pendingClick.current) clearTimeout(pendingClick.current);
-                  if (event.detail === 0)
-                    navigate(`/pin/${post.id}`, { state });
-                  if (event.detail === 1)
-                    pendingClick.current = setTimeout(
-                      () =>
-                        navigate(`/pin/${post.id}`, {
-                          state,
-                        }),
-                      300,
-                    );
-                }}
-                onDoubleClick={(event) => {
-                  if (!feedFirst) return;
-                  event.preventDefault();
-                  if (pendingClick.current) clearTimeout(pendingClick.current);
-                  void quickSave(post);
-                }}
-              >
-                <PinImage post={post} />
-                {!feedFirst && (
-                  <span className="pin-hover-copy">
-                    <strong>{post.title}</strong>
-                    <span>
-                      {post.owner.display_name || post.owner.username}
-                    </span>
-                  </span>
-                )}
-              </Link>
-              {feedFirst && (
-                <>
-                  <LikeButton post={post} compact />
-                  <div className="pin-hover-copy">
-                    <Link
-                      className="pin-overlay-title"
-                      onClick={(event) => {
-                        if (
-                          !event.ctrlKey &&
-                          !event.metaKey &&
-                          !event.shiftKey &&
-                          !event.altKey
-                        ) {
-                          event.preventDefault();
+            <DeferredPinContent enabled={bounded}>
+              <div className="pin-image">
+                <Link
+                  className="pin-open"
+                  to={`/pin/${post.id}`}
+                  state={pinState(post)}
+                  onClick={(event) => {
+                    if (
+                      !feedFirst ||
+                      event.ctrlKey ||
+                      event.metaKey ||
+                      event.shiftKey ||
+                      event.altKey
+                    )
+                      return;
+                    event.preventDefault();
+                    const state = pinState(post);
+                    if (pendingClick.current)
+                      clearTimeout(pendingClick.current);
+                    if (event.detail === 0)
+                      navigate(`/pin/${post.id}`, { state });
+                    if (event.detail === 1)
+                      pendingClick.current = setTimeout(
+                        () =>
                           navigate(`/pin/${post.id}`, {
-                            state: pinState(post),
-                          });
-                        }
-                      }}
-                      to={`/pin/${post.id}`}
-                      state={pinState(post)}
-                    >
-                      {post.title}
-                    </Link>
-                    <Link
-                      className="pin-overlay-author"
-                      to={`/u/${encodeURIComponent(post.owner.username)}`}
-                    >
+                            state,
+                          }),
+                        300,
+                      );
+                  }}
+                  onDoubleClick={(event) => {
+                    if (!feedFirst) return;
+                    event.preventDefault();
+                    if (pendingClick.current)
+                      clearTimeout(pendingClick.current);
+                    void quickSave(post);
+                  }}
+                >
+                  <PinImage post={post} />
+                  {!feedFirst && (
+                    <span className="pin-hover-copy">
+                      <strong>{post.title}</strong>
+                      <span>
+                        {post.owner.display_name || post.owner.username}
+                      </span>
+                    </span>
+                  )}
+                </Link>
+                {feedFirst && (
+                  <>
+                    <LikeButton post={post} compact />
+                    <div className="pin-hover-copy">
+                      <Link
+                        className="pin-overlay-title"
+                        onClick={(event) => {
+                          if (
+                            !event.ctrlKey &&
+                            !event.metaKey &&
+                            !event.shiftKey &&
+                            !event.altKey
+                          ) {
+                            event.preventDefault();
+                            navigate(`/pin/${post.id}`, {
+                              state: pinState(post),
+                            });
+                          }
+                        }}
+                        to={`/pin/${post.id}`}
+                        state={pinState(post)}
+                      >
+                        {post.title}
+                      </Link>
+                      <Link
+                        className="pin-overlay-author"
+                        to={`/u/${encodeURIComponent(post.owner.username)}`}
+                      >
+                        <Avatar author={post.owner} size="tiny" />
+                        <span>
+                          {post.owner.display_name || post.owner.username}
+                        </span>
+                      </Link>
+                    </div>
+                    <ShareControl
+                      compact
+                      title={post.title}
+                      path={`/pin/${post.id}`}
+                      chat={`/messages?pin=${post.id}`}
+                    />
+                  </>
+                )}
+                <button
+                  className="pin-save"
+                  onClick={() => setSaving(post)}
+                  aria-label={`Save ${post.title}`}
+                  disabled={
+                    !!post.moderation_status &&
+                    post.moderation_status !== "approved"
+                  }
+                >
+                  <Bookmark size={15} />
+                  Save
+                </button>
+              </div>
+              {!feedFirst && (
+                <div className="pin-card-content">
+                  <Link
+                    className="pin-title"
+                    to={`/pin/${post.id}`}
+                    state={pinState(post)}
+                  >
+                    {post.title}
+                  </Link>
+                  {post.moderation_status &&
+                    post.moderation_status !== "approved" && (
+                      <small className="muted">
+                        {post.moderation_status === "rejected"
+                          ? "Image blocked"
+                          : post.moderation_status === "review"
+                            ? "Awaiting review"
+                            : "Processing image"}{" "}
+                        · Only you
+                      </small>
+                    )}
+                  <div className="pin-owner">
+                    <Link to={`/u/${encodeURIComponent(post.owner.username)}`}>
                       <Avatar author={post.owner} size="tiny" />
                       <span>
                         {post.owner.display_name || post.owner.username}
                       </span>
                     </Link>
+                    {action?.(post)}
                   </div>
-                  <ShareControl
-                    compact
-                    title={post.title}
-                    path={`/pin/${post.id}`}
-                    chat={`/messages?pin=${post.id}`}
-                  />
-                </>
-              )}
-              <button
-                className="pin-save"
-                onClick={() => setSaving(post)}
-                aria-label={`Save ${post.title}`}
-                disabled={
-                  !!post.moderation_status &&
-                  post.moderation_status !== "approved"
-                }
-              >
-                <Bookmark size={15} />
-                Save
-              </button>
-            </div>
-            {!feedFirst && (
-              <div className="pin-card-content">
-                <Link
-                  className="pin-title"
-                  to={`/pin/${post.id}`}
-                  state={pinState(post)}
-                >
-                  {post.title}
-                </Link>
-                {post.moderation_status &&
-                  post.moderation_status !== "approved" && (
-                    <small className="muted">
-                      {post.moderation_status === "rejected"
-                        ? "Image blocked"
-                        : post.moderation_status === "review"
-                          ? "Awaiting review"
-                          : "Processing image"}{" "}
-                      · Only you
-                    </small>
-                  )}
-                <div className="pin-owner">
-                  <Link to={`/u/${encodeURIComponent(post.owner.username)}`}>
-                    <Avatar author={post.owner} size="tiny" />
-                    <span>
-                      {post.owner.display_name || post.owner.username}
-                    </span>
-                  </Link>
-                  {action?.(post)}
                 </div>
-              </div>
-            )}
+              )}
+            </DeferredPinContent>
           </article>
         ))}
       </div>
@@ -646,17 +656,17 @@ export function PostGrid({
         </div>
       )}
       <div ref={sentinel} className="feed-status">
-        {page.cursor && !page.loading && !page.error ? (
+        {page.cursor && !capped && !page.loading && !page.error ? (
           <button
             className="secondary-button"
             onClick={() => void page.loadMore()}
           >
-            Load more inspiration
+            {bounded ? "Show more" : "Load more inspiration"}
           </button>
         ) : !page.loading &&
           !page.error &&
           page.items.length > 0 &&
-          (!feedFirst || longFeed) ? (
+          (!feedFirst || longFeed || bounded) ? (
           feedFirst ? (
             <div className="owl-end">
               <Owl state="sleep" />
@@ -690,5 +700,39 @@ export function BoardCard({ board }: { board: Board }) {
       <h3>{board.name}</h3>
       <p>{pluralize(board.post_count, "pin")}</p>
     </Link>
+  );
+}
+
+function DeferredPinContent({
+  enabled,
+  children,
+}: {
+  enabled: boolean;
+  children: ReactNode;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(true);
+  const [height, setHeight] = useState<number>();
+  useEffect(() => {
+    if (!enabled || !ref.current) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (
+          !entry.isIntersecting &&
+          !ref.current?.contains(document.activeElement)
+        ) {
+          setHeight(ref.current?.getBoundingClientRect().height);
+          setVisible(false);
+        } else setVisible(true);
+      },
+      { rootMargin: "1200px" },
+    );
+    observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, [enabled]);
+  return (
+    <div ref={ref} style={!visible ? { height } : undefined}>
+      {visible ? children : null}
+    </div>
   );
 }

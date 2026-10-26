@@ -116,3 +116,46 @@ def personalized_feed(request):
             seen_tags.update(PinEvent.objects.filter(user=request.user).values_list('pin__tags__name', flat=True).distinct())
         ids = rank_feed(candidates(query), weights, seen_tags, now)
     return success(ranked_page(request, query, {'kind': 'personalized', 'user': request.user.pk if request.user.is_authenticated else 0}, ids))
+
+
+@endpoint(['GET'], rate=(30, 60), rate_get=True)
+def download(request, pk):
+    from pathlib import PurePosixPath
+    from mimetypes import guess_type
+    from django.http import FileResponse
+    from django.utils.text import slugify
+    pin = get_object_or_404(visible_pins(request.user), pk=pk, allow_download=True)
+    extension = PurePosixPath(pin.image.name).suffix.lower()
+    filename = (slugify(pin.title)[:120] or f'pin-{pin.pk}') + extension
+    response = FileResponse(pin.image.open('rb'), as_attachment=True, filename=filename, content_type=guess_type(filename)[0] or 'application/octet-stream')
+    # ASGI must receive an async iterator; Django otherwise collects a sync file
+    # iterator into memory before sending it. Keep FileResponse's attachment headers.
+    from django.core.handlers.asgi import ASGIRequest
+    if isinstance(request, ASGIRequest):
+        from asgiref.sync import sync_to_async
+        stream = response.file_to_stream
+
+        async def chunks():
+            try:
+                while True:
+                    chunk = await sync_to_async(stream.read, thread_sensitive=False)(64 * 1024)
+                    if not chunk:
+                        break
+                    yield chunk
+            finally:
+                await sync_to_async(stream.close, thread_sensitive=False)()
+
+        response.streaming_content = chunks()
+    response['Cache-Control'] = 'private, no-store'
+    return response
+
+
+@endpoint(['POST', 'DELETE'], authenticated=True, rate=(60, 60))
+def comment_like(request, pk):
+    from .models import Comment, CommentLike
+    comment = get_object_or_404(Comment, pk=pk, is_hidden=False, author__is_active=True, post__in=visible_pins(request.user))
+    if request.method == 'POST':
+        CommentLike.objects.get_or_create(user=request.user, comment=comment)
+    else:
+        CommentLike.objects.filter(user=request.user, comment=comment).delete()
+    return success({'liked': request.method == 'POST', 'like_count': comment.likes.count()})

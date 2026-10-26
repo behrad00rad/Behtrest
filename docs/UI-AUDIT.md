@@ -29,3 +29,10 @@ Formatting, TypeScript and production builds passed after each phase. Final focu
 ## Limits
 
 The exact original stray 1px line did not reproduce in the baseline screenshots. Structural border rules were removed and affected routes were inspected after cleanup; no reproduced artifact is being claimed as definitively traced. There is no lint script or installed linter; the existing Prettier check was used without adding a dependency. Physical-device keyboard behavior, every application screen/state, the complete backend suite and deployment checks were not rerun. All public/demo data remains local.
+
+
+## Pin detail and mobile Discover follow-up
+
+The latest mobile Discover header keeps logo/search/notifications, hides on downward scrolling and reveals upward, with two control rows and fixed safe-area-aware navigation. More tags opens the focus-contained sheet. Active navigation/chips and the existing owl states use current tokens.
+
+Pin detail comments now precede related pins. A real pin-top wrapper bounds the desktop sticky image; the related masonry follows in normal flow. Download permission, board picker/create/Change/safe Undo, share/follow/comment actions, edge-aware menus, shortcut navigation and initial-HTML social metadata are implemented. See [pin detail behavior](PIN-DETAIL.md) and the [latest verification record](VERIFICATION.md); that record includes the known feed-pagination failure and the missing lint configuration. No new dependency or deployment claim accompanies this checkpoint.

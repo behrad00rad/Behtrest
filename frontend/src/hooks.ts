@@ -44,23 +44,58 @@ export function useResource<T>(path: string) {
   };
 }
 
+const pageCache = new Map<
+  string,
+  { items: { id: number }[]; cursor: string | null }
+>();
+
 export function usePage<T extends { id: number }>(
   path: string,
   keepPrevious = false,
+  restore = false,
 ) {
-  const [items, setItems] = useState<T[]>([]);
-  const [cursor, setCursor] = useState<string | null>(null);
+  const [items, setItems] = useState<T[]>(() =>
+    restore ? (pageCache.get(path)?.items as T[]) || [] : [],
+  );
+  const [total, setTotal] = useState<number>();
+  const [cursor, setCursor] = useState<string | null>(() =>
+    restore ? pageCache.get(path)?.cursor || null : null,
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [version, setVersion] = useState(0);
   const generation = useRef(0);
   const busy = useRef(false);
   const nextRequest = useRef<AbortController | null>(null);
+  const snapshot = useRef({ items, cursor });
+  snapshot.current = { items, cursor };
+  useEffect(
+    () => () => {
+      if (restore && snapshot.current.items.length) {
+        pageCache.delete(path);
+        pageCache.set(path, snapshot.current);
+        if (pageCache.size > 12)
+          pageCache.delete(pageCache.keys().next().value!);
+      }
+    },
+    [path, restore],
+  );
 
   useEffect(() => {
     const current = ++generation.current;
     const controller = new AbortController();
     nextRequest.current?.abort();
+    if (restore && version === 0 && pageCache.has(path)) {
+      const cached = pageCache.get(path)!;
+      setItems(cached.items as T[]);
+      setCursor(cached.cursor);
+      setLoading(false);
+      busy.current = false;
+      return () => {
+        ++generation.current;
+        nextRequest.current?.abort();
+      };
+    }
     busy.current = true;
     if (!keepPrevious) setItems([]);
     setCursor(null);
@@ -70,6 +105,7 @@ export function usePage<T extends { id: number }>(
       .then((page) => {
         if (generation.current === current) {
           setItems(page.items);
+          setTotal(page.total);
           setCursor(page.next_cursor);
         }
       })
@@ -88,7 +124,7 @@ export function usePage<T extends { id: number }>(
       controller.abort();
       nextRequest.current?.abort();
     };
-  }, [path, version, keepPrevious]);
+  }, [path, version, keepPrevious, restore]);
 
   const loadMore = useCallback(async () => {
     if (busy.current || !cursor) return;
@@ -130,6 +166,8 @@ export function usePage<T extends { id: number }>(
   }, [path, cursor]);
   return {
     items,
+    total,
+    setTotal,
     setItems,
     cursor,
     loading,

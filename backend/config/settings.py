@@ -96,3 +96,5 @@ IMAGE_MODERATION_REJECT = float(os.environ.get("BEHTREST_IMAGE_REJECT", "0.75"))
 if not 0 <= IMAGE_MODERATION_REVIEW < IMAGE_MODERATION_REJECT <= 1:
     from django.core.exceptions import ImproperlyConfigured
     raise ImproperlyConfigured('Image moderation thresholds must satisfy 0 <= review < reject <= 1.')
+
+FRONTEND_DIST = Path(os.environ.get('BEHTREST_FRONTEND_DIST', BASE_DIR.parent / 'frontend' / 'dist'))

@@ -20,6 +20,7 @@ class TimestampedModel(models.Model):
 
 
 class Post(TimestampedModel):
+    allow_download = models.BooleanField(default=True)
     like_count = models.PositiveIntegerField(default=0)
     moderation_status = models.CharField(max_length=12, default="approved", db_index=True)
     is_hidden = models.BooleanField(default=False, db_index=True)
@@ -122,6 +123,15 @@ class Comment(TimestampedModel):
 
     def __str__(self):
         return f"Comment by {self.author_id} on {self.post_id}"
+
+
+class CommentLike(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="comment_likes")
+    comment = models.ForeignKey(Comment, on_delete=models.CASCADE, related_name="likes")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["user", "comment"], name="unique_comment_like")]
 
 
 class Board(TimestampedModel):

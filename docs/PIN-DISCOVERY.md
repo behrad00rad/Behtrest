@@ -27,3 +27,8 @@ Phase formatting, TypeScript and production builds passed. There is no configure
 Edge journeys passed at 375/768/1440px: modal versus direct routes, chained related navigation, browser Back/Escape, focus containment, exact feed scroll restoration, persisted guest likes, forced-network-error optimistic rollback, Liked tab, hiding, overflow and Axe A/AA. Full suites, physical-device acceptance and production deployment were not run.
 
 The initial candidate pool is bounded to the newest 500 plus the most-liked 500 visible pins (up to 1000 distinct candidates). A very homogeneous pool can end early under the strict diversity rule. Larger catalogs need candidate retrieval/index tuning, cache/latency instrumentation and ranking evaluation before embeddings. Event retention and a user-facing undo/reset for hidden preferences remain operational follow-ups. No quality improvement or load-test result is claimed without real usage evidence.
+
+
+## Pin-detail feed bounds
+
+The detail UI requests 20 related pins per batch. Three batches may load automatically; later batches require Show more, with a six-batch maximum and sleeping-owl completion. Offscreen card content unmounts behind measured placeholders, and a bounded related-page cache supports chained Back restoration. Comments and all primary actions precede this feed. Server ranking/cursor behavior is otherwise unchanged. See [pin details](PIN-DETAIL.md) for controls and [verification](VERIFICATION.md) for the separate open default-feed cursor regression.

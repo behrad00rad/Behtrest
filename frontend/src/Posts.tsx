@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useId, useRef, useState } from "react";
 import { ImageCheck } from "./ImageCheck";
 import type { FormEvent } from "react";
 import {
@@ -11,36 +11,38 @@ import {
 import {
   ArrowLeft,
   ArrowRight,
-  ArrowUpRight,
-  Bookmark,
+  Download,
   Check,
   Pencil,
   Trash2,
   Upload,
   MoreHorizontal,
   Maximize2,
+  MessageCircle,
+  Send,
   Search as SearchIcon,
   X,
 } from "lucide-react";
 import { request, upload } from "./api";
 import { useAuth } from "./auth";
 import { usePage, useResource } from "./hooks";
-import { SearchField, ShareControl, notify } from "./ProductUI";
+import { SearchField, notify } from "./ProductUI";
 import { ApiError } from "./api";
 import DiscoverTags from "./DiscoverTags";
 import Owl from "./Owl";
 import LikeButton from "./LikeButton";
+import {
+  ActionPopover,
+  PinSaveControl,
+  PinShareControl,
+  PinFollow,
+  CommentLikeButton,
+  PinMetadata,
+} from "./PinActions";
 import { recordPinEvent } from "./pinEvents";
 import { ReportButton } from "./Community";
 import type { Author, Comment, Post } from "./types";
-import {
-  Avatar,
-  ErrorNotice,
-  message,
-  Modal,
-  PostGrid,
-  SaveDialog,
-} from "./components";
+import { Avatar, ErrorNotice, message, Modal, PostGrid } from "./components";
 
 export function Explore() {
   const { user } = useAuth();
@@ -143,7 +145,7 @@ export function Search() {
           <h1>Search</h1>
           <p>
             {query
-              ? `Results for “${query}”`
+              ? `Results for "${query}"`
               : tag
                 ? `Explore #${tag}`
                 : "Find pins and people. Follow an idea."}
@@ -307,7 +309,7 @@ function People({ query }: { query: string }) {
         ))}
       </div>
       <ErrorNotice error={page.error} />
-      {page.loading && <p role="status">Looking for people…</p>}
+      {page.loading && <p role="status">Looking for people...</p>}
       {!page.loading && !page.error && !page.items.length && (
         <div className="empty-state">
           <h2>No one by that name yet.</h2>
@@ -399,9 +401,19 @@ export function PostFields({
           type="url"
           maxLength={500}
           defaultValue={post?.source_url || ""}
-          placeholder="https://…"
+          placeholder="https://..."
         />
         {feedback("source_url")}
+      </label>
+      <label className="checkbox-field">
+        <input
+          type="checkbox"
+          name="allow_download"
+          defaultChecked={post?.allow_download !== false}
+        />
+        <span>
+          Allow downloads<small>Let people download the full-size image.</small>
+        </span>
       </label>
       <label className="field">
         Alt text <span className="optional">recommended</span>
@@ -410,7 +422,7 @@ export function PostFields({
           {...validation("alt_text")}
           maxLength={500}
           defaultValue={post?.alt_text || ""}
-          placeholder="Describe the image for someone who can’t see it"
+          placeholder="Describe the image for someone who cannot see it"
         />
         <small>
           A short description helps people using screen readers enjoy your pin.
@@ -464,6 +476,7 @@ export function CreatePost() {
     }
     const body = new FormData(event.currentTarget);
     body.set("image", file);
+    body.set("allow_download", String(body.has("allow_download")));
     setBusy(true);
     setProgress(0);
     setError("");
@@ -544,7 +557,7 @@ export function CreatePost() {
                 <Upload size={32} />
                 <strong>Drop an image here</strong>
                 <span>or click to choose a file</span>
-                <small>JPG, PNG, WebP · up to 8 MB</small>
+                <small>JPG, PNG, WebP Â· up to 8 MB</small>
               </>
             )}
           </label>
@@ -573,12 +586,12 @@ export function CreatePost() {
                 <span>
                   {progress < 100
                     ? `Uploading ${progress}%`
-                    : "Making your image ready…"}
+                    : "Making your image ready..."}
                 </span>
               </div>
             )}
             <button className="primary-button publish-button" disabled={busy}>
-              {busy ? "Publishing…" : "Publish pin"}
+              {busy ? "Publishing..." : "Publish pin"}
               <ArrowRight size={18} />
             </button>
             <p className="muted small-text">
@@ -598,10 +611,44 @@ function Comments({ postId }: { postId: number }) {
   const [error, setError] = useState("");
   const [editing, setEditing] = useState<Comment | null>(null);
   const [deleting, setDeleting] = useState<Comment | null>(null);
+  useEffect(() => {
+    if (page.total !== undefined)
+      window.dispatchEvent(
+        new CustomEvent("pin-comment-count", {
+          detail: { postId, total: page.total },
+        }),
+      );
+  }, [page.total, postId]);
+  const [expanded, setExpanded] = useState(false);
+  const [mobile, setMobile] = useState(
+    () => matchMedia("(max-width: 767px)").matches,
+  );
+  useEffect(() => {
+    const query = matchMedia("(max-width: 767px)");
+    const update = () => setMobile(query.matches);
+    query.addEventListener("change", update);
+    return () => query.removeEventListener("change", update);
+  }, []);
+  const [draft, setDraft] = useState("");
+  const [commentMenu, setCommentMenu] = useState<number | null>(null);
+  useEffect(() => {
+    const open = () => {
+      setExpanded(true);
+      document.querySelector(".comments-section")?.scrollIntoView({
+        block: "start",
+        behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "instant"
+          : "smooth",
+      });
+    };
+    window.addEventListener("pin-comments", open);
+    return () => window.removeEventListener("pin-comments", open);
+  }, []);
   async function submit(event: FormEvent<HTMLFormElement>, comment?: Comment) {
     event.preventDefault();
     const form = event.currentTarget;
-    const text = new FormData(form).get("text");
+    const text = String(new FormData(form).get("text") || "").trim();
+    if (busy || text.length < 2) return;
     setBusy(true);
     setError("");
     try {
@@ -615,8 +662,12 @@ function Comments({ postId }: { postId: number }) {
           ? previous.map((item) => (item.id === result.id ? result : item))
           : [...previous, result],
       );
+      if (!comment) page.setTotal((n) => (n ?? page.items.length) + 1);
       if (comment) setEditing(null);
-      else form.reset();
+      else {
+        form.reset();
+        setDraft("");
+      }
     } catch (error) {
       setError(message(error));
     } finally {
@@ -632,6 +683,7 @@ function Comments({ postId }: { postId: number }) {
       page.setItems((previous) =>
         previous.filter((item) => item.id !== deleting.id),
       );
+      page.setTotal((n) => Math.max(0, (n ?? page.items.length) - 1));
       setDeleting(null);
     } catch (error) {
       setError(message(error));
@@ -639,80 +691,136 @@ function Comments({ postId }: { postId: number }) {
       setBusy(false);
     }
   }
+  const composer = (
+    <form className="comment-form" onSubmit={(event) => void submit(event)}>
+      <Avatar
+        author={{
+          username: user?.username || "You",
+          display_name: user?.profile.display_name || "You",
+          avatar: user?.profile.avatar || null,
+        }}
+        size="small"
+      />
+      <input
+        name="text"
+        aria-label="Your comment"
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        minLength={2}
+        maxLength={2000}
+        placeholder="Add a comment..."
+      />
+      <button
+        className="icon-button"
+        aria-label="Send comment"
+        disabled={busy || draft.trim().length < 2}
+      >
+        <Send size={18} />
+      </button>
+    </form>
+  );
+  const commentRows = page.items
+    .slice()
+    .sort((a, b) => b.created_at.localeCompare(a.created_at) || b.id - a.id)
+    .slice(0, expanded ? undefined : 2)
+    .map((comment) => (
+      <article className="comment" key={comment.id}>
+        <Link to={`/u/${comment.author.username}`}>
+          <Avatar author={comment.author} size="small" />
+        </Link>
+        <div>
+          <div className="comment-heading">
+            <Link to={`/u/${comment.author.username}`}>
+              {comment.author.display_name || comment.author.username}
+            </Link>
+            <time dateTime={comment.created_at}>
+              {relativeTime(comment.created_at)}
+            </time>
+          </div>
+          <p>{comment.text}</p>
+          <CommentLikeButton
+            comment={comment}
+            change={(updated) =>
+              page.setItems((items) =>
+                items.map((item) => (item.id === updated.id ? updated : item)),
+              )
+            }
+          />
+          <ActionPopover
+            className="comment-actions"
+            label="Comment actions"
+            trigger={<MoreHorizontal size={18} />}
+            open={commentMenu === comment.id}
+            change={(value) => setCommentMenu(value ? comment.id : null)}
+          >
+            {user?.id === comment.author.id ? (
+              <>
+                <button
+                  onClick={() => {
+                    setCommentMenu(null);
+                    setEditing(comment);
+                  }}
+                >
+                  Edit
+                </button>
+                <button
+                  onClick={() => {
+                    setCommentMenu(null);
+                    setDeleting(comment);
+                  }}
+                >
+                  Delete
+                </button>
+              </>
+            ) : (
+              <ReportButton kind="comment" target={comment.id} label="Report" />
+            )}
+          </ActionPopover>
+        </div>
+      </article>
+    ));
   return (
     <section className="comments-section">
       <div className="comments-heading">
         <h2>Comments</h2>
-        <span>
-          {page.items.length}
-          {page.cursor ? "+" : ""}
-        </span>
+        <span>{page.total ?? page.items.length}</span>
       </div>
       <ErrorNotice error={!editing && !deleting ? error : ""} />
-      {page.items
-        .slice()
-        .sort((a, b) => a.created_at.localeCompare(b.created_at) || a.id - b.id)
-        .map((comment) => (
-          <article className="comment" key={comment.id}>
-            <Link to={`/u/${comment.author.username}`}>
-              <Avatar author={comment.author} size="small" />
-            </Link>
-            <div>
-              <div className="comment-heading">
-                <Link to={`/u/${comment.author.username}`}>
-                  {comment.author.display_name || comment.author.username}
-                </Link>
-                <time dateTime={comment.created_at}>
-                  {new Date(comment.created_at).toLocaleDateString([], {
-                    month: "short",
-                    day: "numeric",
-                  })}
-                  {new Date(comment.updated_at).getTime() -
-                    new Date(comment.created_at).getTime() >
-                    1000 && " · Edited"}
-                </time>
-              </div>
-              <p>{comment.text}</p>
-              {user?.id !== comment.author.id && (
-                <ReportButton
-                  kind="comment"
-                  target={comment.id}
-                  label="Report comment"
-                />
-              )}
-              {user?.id === comment.author.id && (
-                <details className="comment-actions">
-                  <summary aria-label="Comment actions">
-                    <MoreHorizontal size={18} />
-                  </summary>
-                  <div>
-                    <button
-                      onClick={() => {
-                        setError("");
-                        setEditing(comment);
-                      }}
-                    >
-                      <Pencil size={12} />
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => {
-                        setError("");
-                        setDeleting(comment);
-                      }}
-                    >
-                      <Trash2 size={12} />
-                      Delete
-                    </button>
-                  </div>
-                </details>
-              )}
-            </div>
-          </article>
-        ))}
+      {((page.total ?? page.items.length) > 2 || expanded) && (
+        <>
+          <button
+            className="quiet-button view-comments"
+            onClick={() => setExpanded((value) => !value)}
+          >
+            {expanded ? "Collapse" : "View all"}{" "}
+            {page.total ?? page.items.length} comments
+          </button>
+        </>
+      )}
+      {(!expanded || !mobile) && commentRows}
+      {expanded && mobile && (
+        <Modal
+          title="Comments"
+          className="comments-sheet"
+          close={() => setExpanded(false)}
+        >
+          {commentRows}
+          {page.cursor && (
+            <button
+              className="quiet-button"
+              disabled={page.loading}
+              onClick={() => void page.loadMore()}
+            >
+              Load more comments
+            </button>
+          )}
+          <ErrorNotice error={page.error} />
+          {composer}
+        </Modal>
+      )}
       {page.loading && (
         <p className="muted" role="status">
-          Loading comments…
+          Loading comments...
         </p>
       )}
       <ErrorNotice error={page.error} />
@@ -724,7 +832,7 @@ function Comments({ postId }: { postId: number }) {
           Try again
         </button>
       )}
-      {page.cursor && (
+      {expanded && !mobile && page.cursor && (
         <button
           className="quiet-button"
           onClick={() => void page.loadMore()}
@@ -734,23 +842,9 @@ function Comments({ postId }: { postId: number }) {
         </button>
       )}
       {!page.loading && !page.items.length && !page.error && (
-        <p className="muted">Be the first to leave a little thought.</p>
+        <p className="muted">Be the first to comment.</p>
       )}
-      <form className="comment-form" onSubmit={(event) => void submit(event)}>
-        <label className="field">
-          Your comment
-          <textarea
-            name="text"
-            required
-            maxLength={2000}
-            placeholder="What do you think?"
-            rows={2}
-          />
-        </label>
-        <button className="secondary-button" disabled={busy}>
-          Post comment <ArrowRight size={15} />
-        </button>
-      </form>
+      {(!expanded || !mobile) && composer}
       {editing && (
         <Modal
           title="Edit your comment"
@@ -803,13 +897,23 @@ export function PostDetail({ onBack }: { onBack?: () => void } = {}) {
   const resource = useResource<Post>(`/posts/${id}/`);
   const { user } = useAuth();
   const navigate = useNavigate();
-  const [saving, setSaving] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [viewing, setViewing] = useState(false);
   const [imageReady, setImageReady] = useState(false);
+  const [pastImage, setPastImage] = useState(false);
+  useEffect(() => {
+    const image = document.querySelector(".detail-image");
+    if (!image) return;
+    const observer = new IntersectionObserver(([entry]) =>
+      setPastImage(!entry.isIntersecting && entry.boundingClientRect.top < 0),
+    );
+    observer.observe(image);
+    return () => observer.disconnect();
+  }, [resource.data?.id]);
   const post = resource.data;
   useEffect(() => {
     if (!post || post.moderation_status !== "approved") return;
@@ -821,6 +925,83 @@ export function PostDetail({ onBack }: { onBack?: () => void } = {}) {
     );
     return () => clearTimeout(timer);
   }, [post?.id, location.state?.pinClick]);
+  useLayoutEffect(() => {
+    if (!id) return;
+    const dialog =
+      document.querySelector<HTMLDialogElement>(".pin-detail-dialog");
+    // Replacing a chained pin can leave focus on the inert document body.
+    if (dialog && !dialog.contains(document.activeElement)) {
+      dialog
+        .querySelector<HTMLButtonElement>(".image-back")
+        ?.focus({ preventScroll: true });
+    }
+    const keyboard = (event: KeyboardEvent) => {
+      const target = event.target;
+      if (
+        event.defaultPrevented ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.altKey ||
+        (target instanceof HTMLElement &&
+          (target.closest('input,textarea,select,[contenteditable="true"]') ||
+            target.isContentEditable))
+      )
+        return;
+      const dialogs = [...document.querySelectorAll("dialog[open]")];
+      if (
+        dialogs.length &&
+        !dialogs.at(-1)?.classList.contains("pin-detail-dialog")
+      )
+        return;
+      if (document.querySelector(".pin-popover-panel")) return;
+      if (event.key.toLowerCase() === "l") {
+        event.preventDefault();
+        document
+          .querySelector<HTMLButtonElement>(".detail-actions .like-button")
+          ?.click();
+      }
+      if (event.key.toLowerCase() === "s") {
+        event.preventDefault();
+        document.querySelector<HTMLButtonElement>(".pin-save-primary")?.click();
+      }
+      if (event.key === "Escape") {
+        event.preventDefault();
+        if (onBack) onBack();
+        else if (window.history.state?.idx > 0) navigate(-1);
+        else navigate("/");
+      }
+      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+        const activeState = window.history.state?.usr || location.state;
+        const currentId = Number(
+          window.location.pathname.match(/\/(?:pin|posts)\/(\d+)/)?.[1] || id,
+        );
+        const sequence: number[] = activeState?.pinSequence || [
+          currentId,
+          ...[
+            ...document.querySelectorAll<HTMLElement>(
+              ".related-pins .feed-pin",
+            ),
+          ].map((pin) => Number(pin.dataset.pinId)),
+        ];
+        const next =
+          sequence[
+            sequence.indexOf(currentId) + (event.key === "ArrowRight" ? 1 : -1)
+          ];
+        if (!next) return;
+        event.preventDefault();
+        navigate(`/pin/${next}`, {
+          state: {
+            ...activeState,
+            pinSequence: sequence,
+            pinDepth: onBack ? (activeState?.pinDepth || 1) + 1 : undefined,
+            pinClick: true,
+          },
+        });
+      }
+    };
+    document.addEventListener("keydown", keyboard);
+    return () => document.removeEventListener("keydown", keyboard);
+  }, [id, post?.id, resource.loading, location.state, onBack, navigate]);
   async function edit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!post) return;
@@ -828,11 +1009,12 @@ export function PostDetail({ onBack }: { onBack?: () => void } = {}) {
     setError("");
     try {
       resource.setData(
-        await request<Post>(
-          `/posts/${post.id}/`,
-          "PATCH",
-          Object.fromEntries(new FormData(event.currentTarget)),
-        ),
+        await request<Post>(`/posts/${post.id}/`, "PATCH", {
+          ...Object.fromEntries(new FormData(event.currentTarget)),
+          allow_download: new FormData(event.currentTarget).has(
+            "allow_download",
+          ),
+        }),
       );
       setEditing(false);
     } catch (error) {
@@ -882,21 +1064,25 @@ export function PostDetail({ onBack }: { onBack?: () => void } = {}) {
       </main>
     );
   return (
-    <main className="collection-page detail-page">
-      <button
-        className="back-link quiet-button"
-        type="button"
-        onClick={() => {
-          if (onBack) onBack();
-          else if (window.history.state?.idx > 0) navigate(-1);
-          else navigate("/");
-        }}
-      >
-        <ArrowLeft size={16} />
-        Back to inspiration
-      </button>
-      <article className="post-detail">
+    <main
+      className={`collection-page detail-page ${pastImage ? "past-image" : ""}`}
+    >
+      <PinMetadata post={post} />
+      <article className="post-detail pin-top">
         <div className="detail-image">
+          <button
+            className="image-back icon-button"
+            aria-label="Back to inspiration"
+            type="button"
+            onClick={() => {
+              if (onBack) onBack();
+              else if (window.history.state?.idx > 0) navigate(-1);
+              else navigate("/");
+            }}
+          >
+            <ArrowLeft size={16} />
+          </button>
+
           <button
             className="image-expand"
             aria-label="View full image"
@@ -922,33 +1108,51 @@ export function PostDetail({ onBack }: { onBack?: () => void } = {}) {
             />
           )}
         </div>
-        <div className="detail-copy">
-          {post.scan_id && post.moderation_status !== "approved" && (
-            <ImageCheck
-              id={post.scan_id}
-              approved={() => {
-                void request<Post>(`/posts/${post.id}/`)
-                  .then(resource.setData)
-                  .catch((e) => setError(message(e)));
-              }}
-            />
-          )}
-          <h1>{post.title}</h1>
-          <ErrorNotice error={error} />
-          <Link className="author-link" to={`/u/${post.owner.username}`}>
-            <Avatar author={post.owner} size="small" />
-            <span>
-              <strong>{post.owner.display_name || post.owner.username}</strong>
-              <small>@{post.owner.username}</small>
-            </span>
-          </Link>
-          <div className="detail-actions">
-            <LikeButton post={post} />
-            <details className="pin-preference-menu">
-              <summary aria-label="More pin actions">
-                <MoreHorizontal size={20} />
-              </summary>
-              <div>
+        <div className="pin-details">
+          <div className="detail-copy">
+            {post.scan_id && post.moderation_status !== "approved" && (
+              <ImageCheck
+                id={post.scan_id}
+                approved={() => {
+                  void request<Post>(`/posts/${post.id}/`)
+                    .then(resource.setData)
+                    .catch((e) => setError(message(e)));
+                }}
+              />
+            )}
+            <div className="detail-actions">
+              <LikeButton post={post} />
+              <button
+                className="icon-button"
+                aria-label="Open comments"
+                onClick={() => window.dispatchEvent(new Event("pin-comments"))}
+              >
+                <MessageCircle size={20} />
+                <CommentCount postId={post.id} />
+              </button>
+              <ActionPopover
+                label="More pin actions"
+                trigger={<MoreHorizontal size={20} />}
+                open={menuOpen}
+                change={setMenuOpen}
+                className="pin-preference-menu"
+              >
+                {post.allow_download !== false &&
+                  post.moderation_status === "approved" && (
+                    <a href={`/api/pins/${post.id}/download`} download>
+                      <Download size={17} />
+                      Download image
+                    </a>
+                  )}
+                {post.source_url && (
+                  <a
+                    href={post.source_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Visit source
+                  </a>
+                )}
                 <button
                   type="button"
                   className="quiet-button"
@@ -971,85 +1175,87 @@ export function PostDetail({ onBack }: { onBack?: () => void } = {}) {
                 {post.owner.id !== user?.id && (
                   <ReportButton kind="post" target={post.id} label="Report" />
                 )}
-              </div>
-            </details>
-            {(!post.moderation_status ||
-              post.moderation_status === "approved") && (
-              <ShareControl
-                title="pin"
-                path={`/pin/${post.id}`}
-                chat={`/messages?pin=${post.id}`}
-              />
+                {post.owner.id === user?.id && (
+                  <>
+                    <button
+                      onClick={() => {
+                        setMenuOpen(false);
+                        setError("");
+                        setEditing(true);
+                      }}
+                    >
+                      <Pencil size={14} />
+                      Edit pin
+                    </button>
+                    <button
+                      className="danger-text"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        setError("");
+                        setDeleting(true);
+                      }}
+                    >
+                      <Trash2 size={14} />
+                      Delete pin
+                    </button>
+                  </>
+                )}
+              </ActionPopover>
+              {(!post.moderation_status ||
+                post.moderation_status === "approved") && (
+                <PinShareControl post={post} />
+              )}
+              {post.allow_download !== false &&
+                post.moderation_status === "approved" && (
+                  <a
+                    className="pin-download-icon icon-button"
+                    href={`/api/pins/${post.id}/download`}
+                    download
+                    aria-label="Download image"
+                  >
+                    <Download size={20} />
+                  </a>
+                )}
+              <PinSaveControl post={post} />
+            </div>
+            <h1>{post.title}</h1>
+            <ErrorNotice error={error} />
+            <div className="pin-author-row">
+              <Link className="author-link" to={`/u/${post.owner.username}`}>
+                <Avatar author={post.owner} size="small" />
+                <span>
+                  <strong>
+                    {post.owner.display_name || post.owner.username}
+                  </strong>
+                  <small>@{post.owner.username}</small>
+                </span>
+              </Link>
+              {user?.id !== post.owner.id && <PinFollow author={post.owner} />}
+            </div>
+            {post.description && (
+              <p className="post-description">
+                {post.description.split("\nPhoto:")[0]}
+              </p>
             )}
-            {post.source_url ? (
+            {post.source_url && (
               <a
-                className="source-link"
+                className="pin-source"
                 href={post.source_url}
                 target="_blank"
                 rel="noopener noreferrer"
               >
-                Visit source <ArrowUpRight size={15} />
+                Source:{" "}
+                {new URL(post.source_url).hostname.replace(/^www\./, "")}
               </a>
-            ) : (
-              <span className="detail-date">
-                {new Date(post.created_at).toLocaleDateString([], {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-              </span>
             )}
-            <button
-              className="primary-button compact"
-              onClick={() => setSaving(true)}
-              disabled={
-                !!post.moderation_status &&
-                post.moderation_status !== "approved"
-              }
-            >
-              <Bookmark size={17} />
-              Save
-            </button>
+            <div className="post-tags filter-chips">
+              {post.tags.map((tag) => (
+                <Link to={`/?tag=${encodeURIComponent(tag)}`} key={tag}>
+                  #{tag}
+                </Link>
+              ))}
+            </div>
           </div>
-          {post.description && (
-            <p className="post-description">{post.description}</p>
-          )}
-          <div className="post-tags">
-            {post.tags.map((tag) => (
-              <Link to={`/?tag=${encodeURIComponent(tag)}`} key={tag}>
-                #{tag}
-              </Link>
-            ))}
-          </div>
-          {post.owner.id === user?.id && (
-            <details className="owner-actions pin-owner-menu">
-              <summary aria-label="Pin options">
-                <MoreHorizontal size={18} />
-              </summary>
-              <div>
-                <button
-                  className="quiet-button"
-                  onClick={() => {
-                    setError("");
-                    setEditing(true);
-                  }}
-                >
-                  <Pencil size={14} />
-                  Edit pin
-                </button>
-                <button
-                  className="quiet-button danger-text"
-                  onClick={() => {
-                    setError("");
-                    setDeleting(true);
-                  }}
-                >
-                  <Trash2 size={14} />
-                  Delete pin
-                </button>
-              </div>
-            </details>
-          )}
           {(!post.moderation_status ||
             post.moderation_status === "approved") && (
             <Comments key={post.id} postId={post.id} />
@@ -1065,9 +1271,25 @@ export function PostDetail({ onBack }: { onBack?: () => void } = {}) {
           <PostGrid
             key={post.id}
             feedFirst
-            endpoint={`/pins/${post.id}/related/`}
+            bounded
+            endpoint={`/pins/${post.id}/related/?page_size=20`}
           />
         </section>
+      )}
+      {pastImage && (
+        <button
+          className="back-to-top icon-button"
+          aria-label="Back to top"
+          onClick={() =>
+            document.querySelector(".detail-image")?.scrollIntoView({
+              behavior: matchMedia("(prefers-reduced-motion: reduce)").matches
+                ? "instant"
+                : "smooth",
+            })
+          }
+        >
+          <ArrowLeft style={{ transform: "rotate(90deg)" }} size={20} />
+        </button>
       )}
       {viewing && (
         <Modal title={post.title} close={() => setViewing(false)}>
@@ -1078,7 +1300,6 @@ export function PostDetail({ onBack }: { onBack?: () => void } = {}) {
           />
         </Modal>
       )}
-      {saving && <SaveDialog post={post} close={() => setSaving(false)} />}{" "}
       {editing && (
         <Modal
           title="Edit your pin"
@@ -1089,7 +1310,7 @@ export function PostDetail({ onBack }: { onBack?: () => void } = {}) {
             <PostFields post={post} />
             <ErrorNotice error={error} />
             <button className="primary-button" disabled={busy}>
-              {busy ? "Saving…" : "Save changes"}
+              {busy ? "Saving..." : "Save changes"}
               <Check size={17} />
             </button>
           </form>
@@ -1117,4 +1338,25 @@ export function PostDetail({ onBack }: { onBack?: () => void } = {}) {
       )}
     </main>
   );
+}
+
+function relativeTime(value: string) {
+  const m = Math.max(1, Math.floor((Date.now() - Date.parse(value)) / 60000));
+  return m < 60
+    ? `${m}m`
+    : m < 1440
+      ? `${Math.floor(m / 60)}h`
+      : `${Math.floor(m / 1440)}d`;
+}
+function CommentCount({ postId }: { postId: number }) {
+  const page = usePage<Comment>(`/posts/${postId}/comments/`);
+  useEffect(() => {
+    const update = (event: Event) => {
+      if (event instanceof CustomEvent && event.detail.postId === postId)
+        page.setTotal(event.detail.total);
+    };
+    window.addEventListener("pin-comment-count", update);
+    return () => window.removeEventListener("pin-comment-count", update);
+  }, [postId, page.setTotal]);
+  return <span>{page.total ?? page.items.length}</span>;
 }

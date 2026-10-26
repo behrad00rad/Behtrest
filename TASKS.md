@@ -197,3 +197,18 @@ Representative nudity calibration samples are not bundled. Detection thresholds 
 ## Review checkpoint
 
 The user approved tasks 1–9 and 11. Task 9 is complete; task 11's container candidate passed Linux runtime checks. Task 10 is deferred. No public deployment is authorized. The original completion year remains unconfirmed; do not turn the 2022 course-folder reference into a claimed completion date.
+
+
+## Mobile Discover and pin detail completion (October 26, 2026)
+
+- [x] Mobile Discover header/tags/navigation, existing owl states and responsive masonry.
+- [x] Comments before related pins; a real two-column pin-top wrapper bounds the sticky image.
+- [x] Latest-two comments, mobile sheet/desktop expansion, sticky composer/actions and spam guards.
+- [x] Bounded 20-pin related batches, manual loading after three, completion after six and offscreen unmounting.
+- [x] Download permission and streamed attachments, board picker/create/safe Undo, share/follow/comment actions.
+- [x] Edge-aware accessible menus, pin shortcuts and server-rendered social metadata.
+- [x] Scoped browser, accessibility, backend and build verification; document known failures honestly.
+- [ ] Repair the existing default-feed cursor regression recorded in VERIFICATION.md.
+- [ ] Configure lint and verify native mobile sharing plus new container/crawler routing before deployment.
+
+See [pin details](docs/PIN-DETAIL.md) and the [repository case study](docs/CASE-STUDY.md). Public deployment remains a separate action.

@@ -49,7 +49,7 @@ def consume_limit(action, identity, limit, seconds):
     return max(1, math.ceil((expires - now).total_seconds())) if bucket.count > limit else 0
 
 
-def endpoint(methods, *, authenticated=False, rate=None, account_field=None, multipart=False):
+def endpoint(methods, *, authenticated=False, rate=None, account_field=None, multipart=False, rate_get=False):
     def decorate(view):
         @wraps(view)
         def wrapped(request, *args, **kwargs):
@@ -62,7 +62,7 @@ def endpoint(methods, *, authenticated=False, rate=None, account_field=None, mul
             try:
                 request.data = {}
                 # Consume the IP bucket before parsing to also limit malformed requests.
-                if rate and request.method != "GET" and settings.API_RATE_LIMITS_ENABLED:
+                if rate and (request.method != "GET" or rate_get) and settings.API_RATE_LIMITS_ENABLED:
                     wait = consume_limit(view.__name__, request.META.get("REMOTE_ADDR", "unknown"), *rate)
                     if wait:
                         response = failure("rate_limited", "Too many attempts. Please try again later.", 429)

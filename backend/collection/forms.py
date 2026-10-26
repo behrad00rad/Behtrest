@@ -7,7 +7,7 @@ from .models import Board, Comment, Post
 class PostMetadataForm(forms.ModelForm):
     class Meta:
         model = Post
-        fields = ("title", "description", "alt_text", "source_url")
+        fields = ("title", "description", "alt_text", "source_url", "allow_download")
 
     def clean_source_url(self):
         value = self.cleaned_data["source_url"]
@@ -20,6 +20,12 @@ class PostMetadataForm(forms.ModelForm):
 
 
 class CommentForm(forms.ModelForm):
+    def clean_text(self):
+        text = self.cleaned_data['text'].strip()
+        if len(text) < 2:
+            raise forms.ValidationError('Use at least 2 characters.')
+        return text
+
     class Meta:
         model = Comment
         fields = ("text",)

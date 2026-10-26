@@ -43,6 +43,23 @@ function Header() {
   const navigate = useNavigate();
   const accountMenu = useRef<HTMLDetailsElement>(null);
   const logoClicks = useRef<number[]>([]);
+  const [creating, setCreating] = useState(false);
+  useEffect(() => {
+    let last = window.scrollY;
+    const scroll = () => {
+      const y = window.scrollY;
+      document.documentElement.classList.toggle(
+        "header-hidden",
+        y > last && y > 100,
+      );
+      last = y;
+    };
+    window.addEventListener("scroll", scroll, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", scroll);
+      document.documentElement.classList.remove("header-hidden");
+    };
+  }, []);
   useEffect(() => {
     const outside = (event: PointerEvent) => {
       if (
@@ -236,9 +253,26 @@ function Header() {
             </span>
             <span>Messages</span>
           </NavLink>
-          <NavLink to="/create" aria-label="Create pin">
+          <NavLink
+            to="/create"
+            aria-label="Create pin"
+            onClick={(event) => {
+              if (event.metaKey || event.ctrlKey || creating) return;
+              event.preventDefault();
+              setCreating(true);
+              setTimeout(
+                () => {
+                  navigate("/create");
+                  setCreating(false);
+                },
+                window.matchMedia("(prefers-reduced-motion: reduce)").matches
+                  ? 0
+                  : 200,
+              );
+            }}
+          >
             <span className="mobile-nav-create">
-              <Plus size={19} />
+              <Owl state={creating ? "blink" : "idle"} />
             </span>
             <span>Create</span>
           </NavLink>
@@ -371,10 +405,46 @@ function PinOverlay() {
       });
     };
   }, []);
+  const positions = useRef(new Map<string, number>());
   useLayoutEffect(() => {
-    document.querySelector(".pin-detail-dialog")?.scrollTo(0, 0);
-  }, [location.pathname]);
-  const close = () => navigate(-Math.max(1, location.state?.pinDepth || 1));
+    const dialog = document.querySelector(".pin-detail-dialog");
+    if (!dialog) return;
+    const target = positions.current.get(location.key) || 0;
+    let restoring = target > 0;
+    const restore = () => {
+      if (!restoring) return;
+      dialog.scrollTo(0, target);
+      if (Math.abs(dialog.scrollTop - target) < 2) restoring = false;
+    };
+    dialog.scrollTo(0, target);
+    const observer = new MutationObserver(restore);
+    observer.observe(dialog, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["style"],
+    });
+    const timer = setTimeout(() => {
+      restoring = false;
+      observer.disconnect();
+    }, 3000);
+    const remember = () => {
+      if (!restoring) positions.current.set(location.key, dialog.scrollTop);
+    };
+    dialog.addEventListener("scroll", remember, { passive: true });
+    return () => {
+      clearTimeout(timer);
+      observer.disconnect();
+      dialog.removeEventListener("scroll", remember);
+    };
+  }, [location.key]);
+  const close = () =>
+    navigate(
+      -Math.max(
+        1,
+        window.history.state?.usr?.pinDepth || location.state?.pinDepth || 1,
+      ),
+    );
   return (
     <Modal title="Pin details" className="pin-detail-dialog" close={close}>
       <PostDetail key={location.pathname} onBack={close} />

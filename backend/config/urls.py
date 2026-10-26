@@ -3,10 +3,14 @@ from django.conf.urls.static import static
 from django.contrib import admin
 from django.urls import include, path
 from common.api import health, ready
+from collection.link_preview import metadata, pin_page
 from collection import social
 from collection import image_moderation
 
 urlpatterns = [
+    path("pin/<int:pk>", pin_page),
+    path("pin/<int:pk>/", pin_page),
+    path("api/pins/<int:pk>/metadata/", metadata),
     path("api/image-scans/<int:pk>/", image_moderation.scan_status),
     path("api/image-scans/<int:pk>/image/", image_moderation.preview),
     path("api/image-scans/<int:pk>/appeal/", image_moderation.appeal),

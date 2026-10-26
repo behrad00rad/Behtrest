@@ -3,6 +3,9 @@ from . import views
 from . import pins
 
 urlpatterns = [
+    path('pins/<int:pk>/download', pins.download),
+    path('pins/<int:pk>/download/', pins.download),
+    path('comments/<int:pk>/likes/', pins.comment_like),
     path('pins/<int:pk>/likes/', pins.like),
     path('pins/<int:pk>/events/', pins.event),
     path('pins/<int:pk>/related/', pins.related),

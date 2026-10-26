@@ -21,7 +21,7 @@ PEOPLE = [
     ('noor', 'Noor Haddad', 'Plants by the window. Travel plans in the notebook.'),
     ('sam', 'Sam Rivera', 'Good coffee, slow dinners, and the occasional mountain.'),
 ]
-COMMENTS = ['This light is so lovely.', 'Adding this to my weekend ideas.', 'The colors work so well together.', 'Exactly the mood I was looking for.', 'I would happily spend an afternoon here.', 'Such a good little detail.']
+COMMENTS = ['This light is so lovely.', 'Adding this to my weekend ideas.', 'The colors work so well together.', 'Saving this palette for my living room.', 'I would happily spend an afternoon here.', 'The shadows make the whole composition work.']
 
 
 class Command(BaseCommand):
@@ -74,6 +74,9 @@ class Command(BaseCommand):
                 Post.objects.filter(pk=post.pk).update(created_at=timezone.now() - timedelta(hours=(24-index)*5))
                 post.tags.set([Tag.objects.get_or_create(name=tag)[0] for tag in tags.split()])
             Comment.objects.get_or_create(post=post, author=users[(index+1) % 4], text=COMMENTS[index % len(COMMENTS)])
+            # Varied fictional authors and repeatable, contextual sample comments.
+            for offset in range(1, 1 + index % 4):
+                Comment.objects.get_or_create(post=post, author=users[(index+offset+1) % len(users)], text=COMMENTS[(index+offset) % len(COMMENTS)])
             posts.append(post)
         for index, user in enumerate(users):
             Follow.objects.get_or_create(follower=user, target=users[(index+1) % 4])

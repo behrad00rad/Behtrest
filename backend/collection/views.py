@@ -58,10 +58,12 @@ def assign_tags(post, tags):
 def apply_form(obj, data, form_class, fields):
     values = {field: data.get(field, getattr(obj, field)) for field in fields}
     for field, value in values.items():
-        if field != 'is_private' and not isinstance(value, str):
+        if field not in ('is_private', 'allow_download') and not isinstance(value, str):
             raise ApiError('invalid_input', f'{field} must be text.')
     if 'is_private' in values and not isinstance(values['is_private'], bool):
         raise ApiError('invalid_input', 'is_private must be a JSON boolean.')
+    if 'allow_download' in values and not isinstance(values['allow_download'], bool):
+        raise ApiError('invalid_input', 'allow_download must be a boolean.')
     form = validate_form(form_class(values, instance=obj))
     for field, value in form.cleaned_data.items():
         setattr(obj, field, value)
@@ -130,10 +132,15 @@ def feed(request):
 
 @endpoint(['POST'], authenticated=True, rate=(30, 60), multipart=True)
 def create_post(request):
-    fields = ('title', 'description', 'alt_text', 'source_url')
+    fields = ('title', 'description', 'alt_text', 'source_url', 'allow_download')
     validate_keys(request.data, (*fields, 'tags'))
     if set(request.FILES) != {'image'} or len(request.FILES.getlist('image')) != 1:
         raise ApiError('invalid_image', 'Choose exactly one image.')
+    if 'allow_download' in request.data and request.content_type == 'multipart/form-data':
+        value = request.data['allow_download']
+        if value not in ('true', 'false'):
+            raise ApiError('invalid_input', 'allow_download must be true or false.')
+        request.data['allow_download'] = value == 'true'
     post = apply_form(Post(owner=request.user), request.data, PostMetadataForm, fields)
     tags = tags_from_input(request.data.get('tags', ''))
     prepared = prepare_image(request.FILES['image'])
@@ -172,7 +179,7 @@ def post_owner_actions(request, pk):
         with transaction.atomic():
             post.delete()
         return success({'deleted': True})
-    fields = ('title', 'description', 'alt_text', 'source_url')
+    fields = ('title', 'description', 'alt_text', 'source_url', 'allow_download')
     validate_keys(request.data, (*fields, 'tags'))
     if not request.data:
         raise ApiError('invalid_input', 'Provide a field to update.')
@@ -191,13 +198,18 @@ def post_owner_actions(request, pk):
 def comments(request, pk):
     post = get_object_or_404(Post, pk=pk, owner__is_active=True, is_hidden=False, moderation_status='approved')
     if request.method == 'GET':
-        query = post.comments.filter(author__is_active=True, is_hidden=False).select_related('author__profile')
-        items, cursor = paginate(query, request, {'kind': 'comments', 'post': pk}, ascending=True)
-        return success({'items': [comment_data(item) for item in items], 'next_cursor': cursor})
+        from .serializers import viewer_comment_likes
+        query = viewer_comment_likes(post.comments.filter(author__is_active=True, is_hidden=False).select_related('author__profile'), request.user)
+        items, cursor = paginate(query, request, {'kind': 'comments', 'post': pk})
+        return success({'items': [comment_data(item) for item in items], 'next_cursor': cursor, 'total': query.count()})
     require_user(request)
     validate_keys(request.data, ('text',))
     comment = apply_form(Comment(author=request.user, post=post), request.data, CommentForm, ('text',))
     comment.full_clean()
+    from datetime import timedelta
+    from django.utils import timezone
+    if Comment.objects.filter(author=request.user, text=comment.text, created_at__gte=timezone.now() - timedelta(seconds=60)).exists():
+        raise ApiError('duplicate_comment', 'Please wait a minute before repeating a comment.', status=429)
     with transaction.atomic():
         comment.save()
         emit(post.owner, request.user, 'comment', f'comment:{comment.pk}', post)
@@ -215,7 +227,7 @@ def comment_owner_actions(request, pk):
         raise ApiError('invalid_input', 'Provide a comment to update.')
     apply_form(comment, request.data, CommentForm, ('text',)).full_clean()
     comment.save()
-    return success(comment_data(comment))
+    return success(comment_data(comment, request.user))
 
 
 @endpoint(['GET', 'POST'], rate=(30, 60))
@@ -304,7 +316,7 @@ def save_to_board(request, pk):
             record_event(request.user, post, 'save', request)
         if created and not board.is_private:
             emit(post.owner, request.user, 'save', f'save:{saved.pk}', post)
-    return success({'id': saved.pk, 'post_id': post.pk, 'board_id': board.pk}, 201 if created else 200)
+    return success({'id': saved.pk, 'post_id': post.pk, 'board_id': board.pk, 'created': created}, 201 if created else 200)
 
 
 @endpoint(['DELETE'], authenticated=True, rate=(30, 60))

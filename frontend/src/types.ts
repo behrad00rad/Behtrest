@@ -5,6 +5,7 @@ export type Author = {
   avatar: string | null;
 };
 export type Post = {
+  allow_download?: boolean;
   liked?: boolean;
   like_count?: number;
   moderation_status?: string;
@@ -23,6 +24,8 @@ export type Post = {
   created_at: string;
 };
 export type Comment = {
+  liked?: boolean;
+  like_count?: number;
   id: number;
   text: string;
   author: Author;
@@ -47,4 +50,8 @@ export type Profile = Author & {
   post_count: number;
   board_count: number;
 };
-export type Page<T> = { items: T[]; next_cursor: string | null };
+export type Page<T> = {
+  items: T[];
+  next_cursor: string | null;
+  total?: number;
+};

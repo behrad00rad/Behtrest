@@ -9,7 +9,7 @@ def post_data(post, liked=None):
             "image": image, "thumbnail": image + '?thumbnail=1' if scan else post.thumbnail.url if post.thumbnail else image,
             "moderation_status": post.moderation_status, "scan_id": scan.pk if scan else None,
             "width": post.image_width or 480, "height": post.image_height or 640,
-            "alt_text": post.alt_text, "source_url": post.source_url,
+            "allow_download": post.allow_download, "alt_text": post.alt_text, "source_url": post.source_url,
             "tags": [tag.name for tag in post.tags.all()], "owner": author_data(post.owner), "created_at": post.created_at.isoformat()}
 
 
@@ -21,8 +21,23 @@ def viewer_likes(query, user):
     return query
 
 
-def comment_data(comment):
-    return {"id": comment.pk, "text": comment.text, "author": author_data(comment.author), "created_at": comment.created_at.isoformat(), "updated_at": comment.updated_at.isoformat()}
+def viewer_comment_likes(query, user):
+    from django.db.models import Count, Exists, OuterRef
+    from .models import CommentLike
+    query = query.annotate(like_total=Count('likes', distinct=True))
+    if user.is_authenticated:
+        query = query.annotate(viewer_liked=Exists(CommentLike.objects.filter(user=user, comment_id=OuterRef('pk'))))
+    return query
+
+
+def comment_data(comment, user=None):
+    liked = getattr(comment, 'viewer_liked', None)
+    if liked is None:
+        liked = bool(user and user.is_authenticated and comment.likes.filter(user=user).exists())
+    total = getattr(comment, 'like_total', None)
+    if total is None:
+        total = comment.likes.count()
+    return {"id": comment.pk, "text": comment.text, "liked": liked, "like_count": total, "author": author_data(comment.author), "created_at": comment.created_at.isoformat(), "updated_at": comment.updated_at.isoformat()}
 
 
 def board_data(board):

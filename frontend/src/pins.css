@@ -134,6 +134,7 @@
 }
 
 .pin-detail-dialog {
+  overflow-y: auto;
   overflow-anchor: none;
   scroll-behavior: auto;
 }
@@ -154,4 +155,663 @@
   border: 0;
   margin: 0;
   padding: 8px 0 16px;
+}
+.pin-detail-dialog > .modal-heading {
+  display: none;
+}
+.pin-detail-dialog {
+  padding: 0;
+}
+.detail-page {
+  display: block;
+}
+/* This real box bounds the sticky image before the related feed begins. */
+.detail-page .pin-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  position: relative;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  overflow: visible;
+}
+.pin-details {
+  min-width: 0;
+}
+.detail-page .detail-image {
+  position: relative;
+  border-radius: 0;
+  overflow: hidden;
+  background: var(--surface);
+}
+.detail-image img {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 75dvh;
+  object-fit: contain;
+}
+.image-back,
+.detail-image .image-expand {
+  position: absolute;
+  top: 16px;
+  z-index: 2;
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--elevated);
+  color: var(--text-primary);
+}
+.image-back {
+  left: 16px;
+}
+.detail-image .image-expand {
+  right: 16px;
+}
+.detail-page .detail-copy {
+  padding: 16px;
+  min-width: 0;
+}
+.detail-page .detail-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 2px;
+  padding: 0;
+  margin: 0 0 16px;
+  border: 0;
+  background: transparent;
+  position: static;
+}
+.detail-actions > .primary-button {
+  margin-left: auto;
+  min-height: 44px;
+  padding: 10px 14px;
+  order: 4;
+}
+.detail-actions :is(.like-button, .icon-button, summary) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+}
+.detail-actions .product-share {
+  order: 2;
+}
+.detail-actions .pin-preference-menu {
+  order: 3;
+}
+.detail-actions .product-share summary > span {
+  display: none;
+}
+.detail-copy h1 {
+  font-size: clamp(24px, 3vw, 34px);
+  line-height: 1.2;
+  margin: 0 0 12px;
+}
+.detail-page .post-description {
+  color: var(--text-primary);
+  font-size: 15px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+.pin-source {
+  display: block;
+  font-size: 12px;
+  color: var(--text-muted);
+  margin: 12px 0;
+}
+.post-tags.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  overflow: visible;
+  margin-top: 16px;
+}
+.post-tags.filter-chips a {
+  font-size: 12px;
+  padding: 8px 12px;
+  border-radius: 20px;
+  background: var(--surface);
+  color: var(--text-primary);
+}
+.detail-page > .related-pins {
+  display: block;
+  margin: 32px 16px 24px;
+  min-width: 0;
+}
+.pin-details > .comments-section {
+  margin: 0;
+  padding: 16px;
+  border: 0;
+  background: transparent;
+  min-width: 0;
+}
+.comments-section .comment,
+.comments-sheet .comment {
+  display: flex;
+  gap: 12px;
+  background: transparent;
+  border: 0;
+  padding: 12px 0;
+  margin: 0;
+}
+.comment > div {
+  flex: 1;
+  min-width: 0;
+  position: relative;
+  padding-right: 36px;
+}
+.comment .avatar,
+.comment-form .avatar {
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+}
+.comment-heading {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 14px;
+}
+.comment-heading time {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+.comment p {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+.comment-actions {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+.comment-actions summary {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  cursor: pointer;
+  list-style: none;
+}
+.comment-actions > div {
+  position: absolute;
+  right: 0;
+  background: var(--elevated);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 8px;
+  min-width: 120px;
+  z-index: 5;
+}
+.comment-actions button,
+.pin-preference-menu a {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  padding: 8px;
+  color: var(--text-primary);
+}
+.detail-page .comment-form {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 0 max(12px, env(safe-area-inset-bottom));
+  background: var(--bg);
+  border: 0;
+  margin-top: 16px;
+  z-index: 6;
+}
+.detail-page .comment-form input {
+  flex: 1;
+  width: 0;
+  min-width: 0;
+  border: 0;
+  background: var(--surface);
+  border-radius: 24px;
+  padding: 12px;
+  font-size: 16px;
+  color: var(--text-primary);
+}
+.comment-form input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.comment-form button {
+  min-width: 44px;
+  min-height: 44px;
+}
+.comments-sheet {
+  width: min(600px, 100%);
+  max-height: 85dvh;
+}
+.tag-sheet .tag-popover {
+  position: static;
+  width: auto;
+  border: 0;
+  box-shadow: none;
+  padding: 0;
+}
+@media (min-width: 1024px) {
+  .detail-page .pin-top {
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  }
+  .detail-page .detail-image {
+    position: sticky;
+    top: 16px;
+  }
+  .detail-page .detail-copy {
+    padding: 24px;
+  }
+  .pin-details > .comments-section {
+    padding: 0 24px 24px;
+  }
+}
+@media (max-width: 767px) {
+  .pin-detail-dialog {
+    width: 100%;
+    max-width: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+  }
+  body:has(.detail-page) .mobile-nav {
+    display: none;
+  }
+  .page-container > .detail-page {
+    margin: 0 calc(-1 * var(--page-gutter));
+    width: calc(100% + 2 * var(--page-gutter));
+  }
+  .comments-sheet {
+    position: fixed;
+    inset: auto 0 0;
+    margin: 0;
+    max-width: 100%;
+    border-radius: 24px 24px 0 0;
+    padding: 20px 16px max(20px, env(safe-area-inset-bottom));
+  }
+  .detail-page .comment-form {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+  .pin-details > .comments-section {
+    padding-bottom: 100px;
+  }
+}
+.modal[open],
+details[open] > div {
+  animation: detail-enter 200ms ease-out;
+}
+@keyframes detail-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .modal[open],
+  details[open] > div {
+    animation: none;
+  }
+}
+.detail-actions > * {
+  flex: none;
+  width: auto;
+}
+.detail-actions > .primary-button {
+  width: auto;
+}
+.detail-page .detail-copy {
+  background: transparent;
+}
+@media (max-width: 767px) {
+  .site-header .activity-trigger b {
+    font-size: 0;
+    min-width: 7px;
+    width: 7px;
+    height: 7px;
+    padding: 0;
+  }
+}
+.app-shell .pin-detail-dialog {
+  padding: 0;
+}
+.pin-detail-dialog .detail-page {
+  padding: 0;
+}
+.detail-page .detail-image img {
+  border-radius: 0;
+  height: auto;
+  max-height: 80vh;
+  object-fit: contain;
+}
+.detail-page .comment-form input {
+  border: 0 !important;
+}
+.detail-page .detail-image .image-back {
+  position: absolute;
+  left: 16px;
+  top: 16px;
+  display: grid;
+  place-items: center;
+  background: var(--elevated);
+  z-index: 3;
+  width: 44px;
+  height: 44px;
+}
+@media (max-width: 767px) {
+  .app-shell .pin-detail-dialog {
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    width: 100%;
+    max-width: 100%;
+    height: 100dvh;
+    max-height: 100dvh;
+    margin: 0;
+  }
+}
+.back-to-top {
+  position: fixed;
+  right: 20px;
+  bottom: 90px;
+  z-index: 25;
+  background: var(--elevated);
+  color: var(--text-primary);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+}
+.comments-section {
+  scroll-margin-top: 80px;
+}
+.detail-page .detail-actions {
+  z-index: 22;
+}
+@media (max-width: 767px) {
+  .past-image .detail-actions {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: var(--bg);
+    padding: 8px 16px;
+    margin: 0;
+  }
+  .past-image .detail-copy {
+    padding-top: 76px;
+  }
+}
+@media (max-width: 767px) {
+  .detail-page .detail-image {
+    position: relative;
+    top: 0;
+  }
+  .detail-page .detail-copy {
+    min-height: 0;
+  }
+}
+@media (max-width: 767px) {
+  .app-shell .mobile-nav {
+    justify-content: space-around;
+    gap: 0;
+  }
+  .app-shell .mobile-nav > a {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    min-width: 0;
+    font-size: 11px;
+  }
+  .app-shell .discover-tag-choices {
+    border: 0;
+    padding-left: 0;
+  }
+  .app-shell .discover-tag-choices .filter-chips button.active {
+    background: var(--accent) !important;
+    border-color: var(--accent);
+    color: var(--text-primary);
+  }
+  .app-shell .mobile-nav a.active > svg,
+  .app-shell .mobile-nav a.active .mobile-nav-icon > svg {
+    fill: var(--accent);
+    fill-opacity: 1;
+  }
+}
+@media (max-width: 767px) {
+  .detail-page > .related-pins {
+    padding-bottom: 100px;
+  }
+  .pin-detail-dialog {
+    scroll-padding: 72px 0 100px;
+  }
+  .comments-sheet {
+    padding-bottom: 100px;
+  }
+  .comments-sheet .comment-form {
+    position: sticky;
+    bottom: 0;
+  }
+  .detail-page .detail-actions > .primary-button {
+    min-width: 72px;
+  }
+  .app-shell .mobile-nav a.active {
+    color: color-mix(in srgb, var(--accent) 70%, white);
+  }
+}
+/* Shared, viewport-aware pin popovers sit in the modal's top layer. */
+.pin-popover {
+  position: relative;
+  flex: none;
+}
+.pin-popover:has(.pin-popover-panel) {
+  z-index: 100;
+}
+.pin-popover .pin-popover-panel {
+  position: fixed;
+  right: auto;
+  bottom: auto;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: min(280px, calc(100vw - 16px));
+  min-width: 0;
+  max-height: min(480px, calc(100dvh - 16px));
+  overflow-y: auto;
+  padding: 12px;
+  margin: 0;
+  background: var(--elevated);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px #0006;
+  animation: pin-popover-in 200ms ease-out;
+}
+.pin-popover-panel > :is(a, button),
+.pin-popover-panel > strong {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 8px;
+  color: var(--text-primary);
+  background: transparent;
+  border: 0;
+  text-align: left;
+  font-size: 14px;
+  line-height: 1.5;
+  border-radius: 8px;
+}
+.pin-popover-panel > :is(a, button):hover {
+  background: var(--surface);
+}
+.pin-popover-panel button small {
+  font-size: 12px;
+  margin-left: auto;
+  color: var(--text-muted);
+}
+.detail-actions > .pin-save-control {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-left: auto;
+  order: 4;
+}
+.pin-save-control .pin-save-primary {
+  min-height: 44px;
+  padding: 10px 12px;
+  width: auto;
+  border-radius: 12px 0 0 12px;
+}
+.pin-save-control .pin-save-primary > svg {
+  display: none;
+}
+.pin-save-control > .board-picker > .icon-button {
+  border-radius: 0 12px 12px 0;
+  background: var(--surface);
+}
+.pin-author-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.pin-author-row .author-link {
+  min-width: 0;
+}
+.pin-author-row .pin-follow {
+  flex: none;
+  min-height: 44px;
+  padding: 8px 16px;
+  font-size: 14px;
+}
+.comment .comment-like {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 8px;
+  background: transparent;
+  border: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.comment .comment-like[aria-pressed="true"] {
+  color: var(--text-primary);
+}
+.detail-actions .pin-download-icon {
+  order: 2;
+}
+.pin-detail-dialog .toast-host {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: 96px;
+  z-index: 500;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+.pin-detail-dialog .toast {
+  pointer-events: auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  background: var(--elevated);
+  color: var(--text-primary);
+}
+.pin-detail-dialog .toast button {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 8px;
+  font-size: 12px;
+  color: var(--text-primary);
+}
+@media (max-width: 1023px) {
+  .detail-actions .pin-download-icon {
+    display: none;
+  }
+}
+@keyframes pin-popover-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pin-popover .pin-popover-panel {
+    animation: none;
+  }
+}
+.pin-detail-dialog .toast-host {
+  transform: none;
+  width: auto;
+  max-width: none;
+}
+.comment .comment-like,
+.comment-actions > .icon-button {
+  min-width: 44px;
+  min-height: 44px;
+}
+.comment .comment-actions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  margin: 0;
+}
+.pin-detail-dialog .toast {
+  flex-wrap: nowrap;
+  padding: 12px;
+  max-width: min(640px, 100%);
+}
+.pin-detail-dialog .toast > span {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  font-size: 14px;
+}
+.pin-detail-dialog .toast > svg,
+.pin-detail-dialog .toast > button {
+  flex: none;
+}
+@media (max-width: 767px) {
+  .pin-detail-dialog .toast > svg {
+    display: none;
+  }
 }

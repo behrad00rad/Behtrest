@@ -55,7 +55,7 @@ Create a JSON manifest beside your locally held, appropriately labeled test imag
 ]
 ```
 
-Run `python backend/manage.py evaluate_image_model path/to/manifest.json --output path/to/report.json`. Optional `--review 0.35 --reject 0.75` compares candidate thresholds without changing production configuration. The report contains decisions, relevant confidence scores, inference/preparation time, false rejections, blocked images approved, and review rate. Files must be inside the manifest directory; nothing is downloaded, uploaded or published. Missing classes produce null rates rather than a misleading zero.
+Run `python backend/manage.py evaluate_image_model path/to/manifest.json --output path/to/report.json`. Optional `--review 0.65 --reject 0.75` compares candidate thresholds without changing production configuration. The report contains decisions, relevant confidence scores, inference/preparation time, false rejections, blocked images approved, and review rate. Files must be inside the manifest directory; nothing is downloaded, uploaded or published. Missing classes produce null rates rather than a misleading zero.
 
 Use separate calibration and validation samples covering actual site content, drawings, small/obscured subjects and nonsexual nudity under the site's policy. Tune using calibration samples and check the untouched validation set before changing environment thresholds. A benign-fixture run verifies tooling, not nudity-detection accuracy. No representative labeled corpus is bundled, and the current thresholds remain uncalibrated defaults.
 
@@ -69,3 +69,5 @@ Use separate calibration and validation samples covering actual site content, dr
 - Existing moderation decisions add `approve_image` and `reject_image` for image reports.
 
 Pin responses include `moderation_status` and `scan_id`. Avatar uploads return HTTP 202 with `{user, scan}` when enabled; session user data includes `profile.avatar_scan` while unresolved. Writes require CSRF and existing permission/rate checks.
+
+October 27, 2026: raised the default review threshold from 0.35 to 0.65 after a user-confirmed clothed portrait was falsely flagged at 0.562. Rejection remains 0.75. This is a targeted policy adjustment, not representative accuracy calibration. Existing environment overrides take precedence; existing review decisions require an explicit recheck or moderator decision.

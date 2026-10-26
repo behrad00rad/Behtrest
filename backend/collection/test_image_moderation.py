@@ -124,7 +124,7 @@ class ImageModerationTests(MediaTestCase):
         self.assertEqual(ModerationLog.objects.filter(report=report, action='approve_image').count(), 1)
 
     def test_uncertain_is_not_public_and_manual_restore_cannot_bypass(self):
-        scan = self.upload(); run_one(FakeDetector(0.5))
+        scan = self.upload(); run_one(FakeDetector(0.7))
         report = ContentReport.objects.get(kind='image', target_id=scan.pk)
         self.assertEqual(report.status, 'open')
         self.login(self.staff)
@@ -176,7 +176,10 @@ class ImageModerationTests(MediaTestCase):
 
     def test_policy_thresholds_and_invalid_output(self):
         self.assertEqual(decision({'x': 0.8}), 'rejected')
-        self.assertEqual(decision({'x': 0.4}), 'review')
+        self.assertEqual(decision({'x': 0.5615811347961426}), 'approved')
+        self.assertEqual(decision({'x': 0.65}), 'review')
+        self.assertEqual(decision({'x': 0.749}), 'review')
+        self.assertEqual(decision({'x': 0.75}), 'rejected')
         with self.assertRaises(ValueError): decision({'x': float('nan')})
         with self.assertRaises(ValueError): decision({'x': 0.01, 'y': float('nan')})
         with override_settings(IMAGE_MODERATION_MODEL='/missing/model.onnx'):

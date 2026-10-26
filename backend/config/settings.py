@@ -91,7 +91,7 @@ IMAGE_QUARANTINE_TOTAL_BYTES = int(os.environ.get("BEHTREST_IMAGE_QUARANTINE_TOT
 if min(IMAGE_UPLOADS_PER_DAY, IMAGE_PENDING_PER_USER, IMAGE_QUARANTINE_USER_BYTES, IMAGE_QUARANTINE_TOTAL_BYTES) < 1:
     raise ValueError("Image quota limits must be positive.")
 IMAGE_MODERATION_MODEL = os.environ.get("BEHTREST_IMAGE_MODEL", str(BASE_DIR / "models" / "nudenet-320.onnx"))
-IMAGE_MODERATION_REVIEW = float(os.environ.get("BEHTREST_IMAGE_REVIEW", "0.35"))
+IMAGE_MODERATION_REVIEW = float(os.environ.get("BEHTREST_IMAGE_REVIEW", "0.65"))
 IMAGE_MODERATION_REJECT = float(os.environ.get("BEHTREST_IMAGE_REJECT", "0.75"))
 if not 0 <= IMAGE_MODERATION_REVIEW < IMAGE_MODERATION_REJECT <= 1:
     from django.core.exceptions import ImproperlyConfigured

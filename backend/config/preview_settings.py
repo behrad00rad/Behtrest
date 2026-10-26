@@ -19,4 +19,5 @@ SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False
 EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
 AUTH_PASSWORD_VALIDATORS = [{'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator', 'OPTIONS': {'min_length': 6}}]
-IMAGE_MODERATION_ENABLED = False
+# Guest uploads follow the same quarantine/review pipeline as public uploads.
+IMAGE_MODERATION_ENABLED = True

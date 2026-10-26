@@ -33,6 +33,8 @@ This is a local preview, not a publicly deployed service. Public hosting needs a
 
 ## Focused verification
 
+New guest uploads are quarantined and screened by the local image moderation worker. The preview launcher validates the installed model before serving and starts/stops its worker with the API. Run `scripts/setup_image_model.py` first if the model is missing. Seeded and previously published images are not retroactively scanned.
+
 ```powershell
 cd backend
 ..\.venv\Scripts\python.exe manage.py test accounts.test_preview accounts.tests accounts.test_referrals

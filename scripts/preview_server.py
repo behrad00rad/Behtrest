@@ -2,6 +2,7 @@
 import os
 from pathlib import Path
 import sys
+import subprocess
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / 'backend'))
@@ -13,5 +14,13 @@ if __name__ == '__main__':
     from django.core.management import call_command
     call_command('migrate', interactive=False, verbosity=0)
     call_command('seed_preview')
+    # Fail before serving if the pinned local model/runtime is unavailable.
+    from collection.image_moderation import Detector
+    Detector()
+    worker = subprocess.Popen([sys.executable, str(ROOT / 'backend' / 'manage.py'), 'moderate_images'], cwd=ROOT)
     import uvicorn
-    uvicorn.run('config.asgi:application', host='127.0.0.1', port=8002, access_log=False)
+    try:
+        uvicorn.run('config.asgi:application', host='127.0.0.1', port=8002, access_log=False)
+    finally:
+        worker.terminate()
+        worker.wait(timeout=10)

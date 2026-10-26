@@ -1,3 +1,4 @@
+import { completeInterests } from "./onboarding";
 import { expect, test, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { resolve } from "node:path";
@@ -16,8 +17,9 @@ async function register(page: Page, username: string) {
     .getByRole("button", { name: "Create account", exact: true })
     .click();
   await expect(
-    page.getByRole("heading", { name: "Find your next little thing." }),
+    page.getByRole("heading", { name: "Discover inspiration" }),
   ).toBeVisible();
+  await completeInterests(page);
 }
 async function accessible(page: Page) {
   const axe = await new AxeBuilder({ page })
@@ -161,8 +163,9 @@ test("follow, activity preferences, report review, and reversible moderation", a
     await staff.getByLabel("Username", { exact: true }).fill("e2e_moderator");
     await staff.locator("#password").fill("Moderation!TestGarden29");
     await staff.getByRole("button", { name: "Sign in", exact: true }).click();
+    await completeInterests(staff);
     await expect(
-      staff.getByRole("heading", { name: "Find your next little thing." }),
+      staff.getByRole("heading", { name: "Discover inspiration" }),
     ).toBeVisible();
     await staff.goto("/moderation");
     const row = staff.locator(".moderation-row").filter({ hasText: alice });

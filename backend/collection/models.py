@@ -4,6 +4,7 @@ from django.conf import settings
 from django.db import models
 from django.db.models import F, Q
 from django.db.models.functions import Lower
+from django.utils import timezone
 
 
 def post_image_path(instance, filename):
@@ -19,6 +20,7 @@ class TimestampedModel(models.Model):
 
 
 class Post(TimestampedModel):
+    like_count = models.PositiveIntegerField(default=0)
     moderation_status = models.CharField(max_length=12, default="approved", db_index=True)
     is_hidden = models.BooleanField(default=False, db_index=True)
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="posts")
@@ -39,6 +41,39 @@ class Post(TimestampedModel):
 
     def __str__(self):
         return self.title
+
+
+class PinLike(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='pin_likes')
+    pin = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='likes')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['user', 'pin'], name='unique_pin_like')]
+        indexes = [models.Index(fields=['user', '-created_at', '-id'], name='pin_like_user_date')]
+
+
+class PinEvent(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='pin_events')
+    pin = models.ForeignKey(Post, on_delete=models.CASCADE, related_name='events')
+    type = models.CharField(max_length=5, choices=[(name, name) for name in ('view', 'click', 'like', 'save', 'hide')])
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
+    session_hash = models.CharField(max_length=64, db_index=True)
+    dedupe_key = models.CharField(max_length=64, unique=True)
+
+    class Meta:
+        constraints = [models.CheckConstraint(condition=Q(type__in=['view', 'click', 'like', 'save', 'hide']), name='valid_pin_event_type')]
+        indexes = [models.Index(fields=['user', 'type', '-created_at'], name='pin_event_user_type_date')]
+
+
+class UserTagInterest(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='tag_interests')
+    tag = models.CharField(max_length=40)
+    weight = models.FloatField(default=0)
+    updated_at = models.DateTimeField(default=timezone.now)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=['user', 'tag'], name='unique_user_tag_interest')]
 
 
 class ImageScan(TimestampedModel):

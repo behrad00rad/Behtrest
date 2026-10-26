@@ -1,3 +1,4 @@
+import { completeInterests } from "./onboarding";
 import { expect, test, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { resolve } from "node:path";
@@ -41,8 +42,9 @@ test("register → upload → comment → private board → profile → logout",
     .getByRole("button", { name: "Create account", exact: true })
     .click();
   await expect(
-    page.getByRole("heading", { name: "Find your next little thing." }),
+    page.getByRole("heading", { name: "Discover inspiration" }),
   ).toBeVisible();
+  await completeInterests(page);
   await expect(page.locator(".pin-card").first()).toBeVisible();
   await accessible(page);
   await page.screenshot({
@@ -59,7 +61,10 @@ test("register → upload → comment → private board → profile → logout",
     );
   expect(new Set(pins).size).toBe(pins.length);
 
-  await page.getByRole("link", { name: "Create pin", exact: true }).click();
+  await page
+    .locator(".site-header")
+    .getByRole("link", { name: "Create pin", exact: true })
+    .click();
   await page
     .getByLabel("Choose pin image")
     .setInputFiles(resolve("e2e/fixtures/blue.png"));
@@ -72,7 +77,7 @@ test("register → upload → comment → private board → profile → logout",
     .fill("A synthetic image for browser verification.");
   await page.getByLabel("Tags", { exact: false }).fill("blue, curious");
   await page
-    .getByLabel("Image description optional")
+    .getByLabel("Alt text recommended")
     .fill("A tiny blue inspiration image.");
   await page.getByRole("button", { name: "Publish pin", exact: true }).click();
   await expect(
@@ -127,7 +132,11 @@ test("register → upload → comment → private board → profile → logout",
   await expect(
     page.getByRole("button", { name: "Use A blue beginning as board cover" }),
   ).toHaveAttribute("aria-pressed", "true");
-  await page.getByRole("link", { name: "Your profile", exact: true }).click();
+  await page.getByLabel("Account menu").click();
+  await page
+    .locator(".account-menu")
+    .getByRole("link", { name: "Your profile", exact: true })
+    .click();
   await page.getByRole("button", { name: "Edit profile", exact: true }).click();
   await page
     .getByLabel("Choose profile picture")
@@ -202,8 +211,7 @@ test("register → upload → comment → private board → profile → logout",
   await expect(
     page.getByRole("heading", { name: "No matching pins. Try another idea." }),
   ).toBeVisible();
-  if (test.info().project.name === "mobile")
-    await page.getByLabel("Account menu").click();
+  await page.getByLabel("Account menu").click();
   await page.getByRole("button", { name: "Sign out", exact: true }).click();
   await expect(
     page.getByRole("heading", { name: "Welcome back." }),

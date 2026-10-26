@@ -15,7 +15,7 @@ from common.media import delete_files, prepare_image, store_images
 from .forms import BoardForm, CommentForm, PostMetadataForm
 from .models import Board, Comment, Post, SavedPost, Tag
 from .pagination import paginate
-from .serializers import author_data, board_data, comment_data, post_data
+from .serializers import author_data, board_data, comment_data, post_data, viewer_likes
 from .models import Follow
 from .activity import emit
 
@@ -83,6 +83,12 @@ def feed(request):
     text = request.GET.get('q', '').strip()
     tag = request.GET.get('tag', '').strip().lower()
     owner = request.GET.get('owner', '').strip().lower()
+    interests_value = request.GET.get('interests', '').strip().lower()
+    if len(interests_value) > 700:
+        raise ApiError('invalid_filter', 'Choose at most 16 interests.')
+    interests = sorted(set(name for name in interests_value.split(',') if name))
+    if len(interests) > 16 or any(not re.fullmatch(r'[a-z0-9_-]{1,40}', name) for name in interests):
+        raise ApiError('invalid_filter', 'Choose valid interests.')
     sort = request.GET.get('sort', 'newest')
     following = request.GET.get('following', '0')
     if following not in ('0', '1'):
@@ -96,6 +102,9 @@ def feed(request):
         raise ApiError('invalid_filter', 'Choose newest or oldest pins.')
     if len(text) > 100 or len(tag) > 40 or len(owner) > 150:
         raise ApiError('invalid_filter', 'Search text or filters are too long.')
+    if not text and not tag and not owner and not interests and following == '0' and sort == 'newest':
+        from .pins import personalized_feed
+        return personalized_feed(request)
     if tag and not re.fullmatch(r'[a-z0-9_-]{1,40}', tag):
         raise ApiError('invalid_filter', 'Choose a valid tag.')
     if owner and request.user.is_authenticated and owner == request.user.username and following == '0':
@@ -106,7 +115,16 @@ def feed(request):
         query = query.filter(tags__name=tag)
     if owner:
         query = query.filter(owner__username=owner)
-    items, cursor = paginate(query, request, {'kind': 'feed', 'q': text, 'tag': tag, 'owner': owner, 'sort': sort, 'following': request.user.pk if following == '1' else None, 'owner_viewer': request.user.pk if owner and request.user.is_authenticated and owner == request.user.username else None}, ascending=sort == 'oldest')
+    if interests:
+        query = query.filter(tags__name__in=interests).distinct()
+    if not owner and request.user.is_authenticated:
+        from .models import PinEvent
+        query = query.exclude(pk__in=PinEvent.objects.filter(user=request.user, type='hide').values('pin_id'))
+    scope = {'kind': 'feed', 'q': text, 'tag': tag, 'owner': owner, 'sort': sort, 'following': request.user.pk if following == '1' else None, 'owner_viewer': request.user.pk if owner and request.user.is_authenticated and owner == request.user.username else None}
+    if interests:
+        scope['interests'] = interests
+    query = viewer_likes(query, request.user)
+    items, cursor = paginate(query, request, scope, ascending=sort == 'oldest')
     return success({'items': [post_data(post) for post in items], 'next_cursor': cursor})
 
 
@@ -145,7 +163,8 @@ def post_owner_actions(request, pk):
     post = get_object_or_404(Post.objects.select_related('owner__profile').prefetch_related('tags'), pk=pk, owner__is_active=True, is_hidden=False)
     if post.moderation_status != 'approved' and post.owner_id != request.user.pk: raise Http404
     if request.method == 'GET':
-        return success(post_data(post))
+        from .models import PinLike
+        return success(post_data(post, liked=request.user.is_authenticated and PinLike.objects.filter(user=request.user, pin=post).exists()))
     require_user(request)
     if post.owner_id != request.user.pk:
         raise Http404
@@ -280,6 +299,9 @@ def save_to_board(request, pk):
     post = get_object_or_404(Post, pk=post_id, owner__is_active=True, is_hidden=False, moderation_status='approved')
     with transaction.atomic():
         saved, created = SavedPost.objects.get_or_create(board=board, post=post)
+        if created:
+            from .pin_events import record_event
+            record_event(request.user, post, 'save', request)
         if created and not board.is_private:
             emit(post.owner, request.user, 'save', f'save:{saved.pk}', post)
     return success({'id': saved.pk, 'post_id': post.pk, 'board_id': board.pk}, 201 if created else 200)

@@ -5,6 +5,8 @@ export type Author = {
   avatar: string | null;
 };
 export type Post = {
+  liked?: boolean;
+  like_count?: number;
   moderation_status?: string;
   scan_id?: number | null;
   id: number;

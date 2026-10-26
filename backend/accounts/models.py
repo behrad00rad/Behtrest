@@ -60,6 +60,7 @@ class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
     display_name = models.CharField(max_length=80, blank=True)
     bio = models.CharField(max_length=500, blank=True)
+    interests = models.JSONField(default=list, blank=True)
     avatar = models.ImageField(upload_to="avatars/%Y/%m/", blank=True)
 
     def __str__(self):

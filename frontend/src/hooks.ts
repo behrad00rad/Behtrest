@@ -44,7 +44,10 @@ export function useResource<T>(path: string) {
   };
 }
 
-export function usePage<T extends { id: number }>(path: string) {
+export function usePage<T extends { id: number }>(
+  path: string,
+  keepPrevious = false,
+) {
   const [items, setItems] = useState<T[]>([]);
   const [cursor, setCursor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -59,7 +62,7 @@ export function usePage<T extends { id: number }>(path: string) {
     const controller = new AbortController();
     nextRequest.current?.abort();
     busy.current = true;
-    setItems([]);
+    if (!keepPrevious) setItems([]);
     setCursor(null);
     setLoading(true);
     setError("");
@@ -85,7 +88,7 @@ export function usePage<T extends { id: number }>(path: string) {
       controller.abort();
       nextRequest.current?.abort();
     };
-  }, [path, version]);
+  }, [path, version, keepPrevious]);
 
   const loadMore = useCallback(async () => {
     if (busy.current || !cursor) return;

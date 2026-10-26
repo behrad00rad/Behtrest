@@ -1,0 +1,219 @@
+/* Discover is a continuous image feed; other collection screens retain metadata. */
+.feed-pin:has(.pin-more[open]) {
+  z-index: 5;
+}
+.feed-pin .pin-image:has(.pin-more[open]) {
+  overflow: visible;
+}
+.feed-pin .pin-hover-copy {
+  border-radius: 0 0 16px 16px;
+}
+.page-container > .explore-page {
+  margin-top: 12px;
+}
+.app-shell .preview-banner {
+  white-space: nowrap;
+  height: 36px;
+}
+.preview-banner a {
+  color: var(--text-primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.preview-banner .guest-badge {
+  padding: 0 8px;
+}
+.discover-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  margin-bottom: 12px;
+}
+.app-shell .discover-toolbar .feed-tabs {
+  flex: none;
+  margin: 0;
+  padding: 0;
+  gap: 4px;
+}
+.app-shell .discover-toolbar .feed-tabs button {
+  padding: 8px;
+  white-space: nowrap;
+}
+.discover-toolbar .filter-chips {
+  margin: 0;
+  padding: 4px;
+  gap: 8px;
+}
+.discover-toolbar .tag-scroll-arrow {
+  width: 24px;
+  height: 32px;
+}
+.tag-scroller[data-right="true"] .filter-chips {
+  mask-image: linear-gradient(to right, #000 calc(100% - 16px), transparent);
+}
+.tag-scroller[data-left="true"] .filter-chips {
+  mask-image: linear-gradient(to right, transparent, #000 16px);
+}
+.tag-scroller[data-left="true"][data-right="true"] .filter-chips {
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 16px,
+    #000 calc(100% - 16px),
+    transparent
+  );
+}
+.explore-page .pin-grid {
+  columns: 2;
+  column-gap: 12px;
+}
+.explore-page .feed-pin {
+  break-inside: avoid;
+  margin: 0 0 12px;
+  position: relative;
+}
+.app-shell .feed-pin .pin-image,
+.app-shell .feed-pin .pin-image img {
+  border-radius: 16px !important;
+}
+.feed-pin .pin-image {
+  margin: 0;
+  isolation: isolate;
+}
+.feed-pin .pin-media {
+  min-height: 0;
+}
+.feed-pin .pin-image > a {
+  display: block;
+}
+.feed-pin .pin-image:hover img {
+  transform: none;
+  filter: none;
+}
+.feed-pin .pin-hover-copy {
+  padding: 56px 12px 12px;
+  pointer-events: none;
+  gap: 8px;
+  z-index: 1;
+  visibility: hidden;
+}
+.feed-pin .pin-overlay-title {
+  pointer-events: auto;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+  color: #fff;
+}
+.feed-pin .pin-overlay-author {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #fff;
+  font-size: 12px;
+}
+.feed-pin .pin-overlay-author .avatar {
+  flex: none;
+}
+.feed-pin .pin-overlay-author span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell .feed-pin .pin-save {
+  z-index: 3;
+  top: 8px;
+  right: 8px;
+  min-height: 36px;
+  padding: 8px 12px;
+  opacity: 0;
+  background: var(--elevated);
+  color: var(--text-primary);
+}
+.feed-pin .pin-more summary {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 3;
+  width: 36px;
+  height: 36px;
+  min-height: 36px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  opacity: 0;
+  background: var(--elevated);
+  color: var(--text-primary);
+}
+.feed-pin .pin-more {
+  position: static;
+}
+.feed-pin .pin-more .product-share-panel {
+  position: absolute;
+  top: 52px;
+  left: 8px;
+  right: 8px;
+  width: auto;
+  min-width: 0;
+  z-index: 4;
+  padding: 8px;
+}
+.feed-pin .pin-more .product-share-panel :is(a, button) {
+  white-space: normal;
+  padding: 8px;
+}
+.feed-pin:is(:hover, :focus-within, :focus-visible) .pin-hover-copy,
+.feed-pin:has(.pin-more[open]) .pin-hover-copy {
+  opacity: 1;
+  visibility: visible;
+}
+.app-shell .feed-pin:is(:hover, :focus-within, :focus-visible) .pin-save,
+.feed-pin:is(:hover, :focus-within, :focus-visible) .pin-more summary,
+.feed-pin:has(.pin-more[open]) :is(.pin-save, .pin-more summary) {
+  opacity: 1;
+}
+.feed-pin:focus-visible {
+  outline: 2px solid var(--text-primary);
+  outline-offset: 3px;
+  border-radius: 16px;
+}
+@media (min-width: 768px) {
+  .explore-page .pin-grid {
+    columns: 3;
+  }
+}
+@media (min-width: 1024px) {
+  .explore-page .pin-grid {
+    columns: 4;
+  }
+}
+@media (min-width: 1280px) {
+  .explore-page .pin-grid {
+    columns: 5;
+  }
+}
+@media (min-width: 1536px) {
+  .explore-page .pin-grid {
+    columns: 6;
+  }
+}
+@media (max-width: 650px) {
+  .preview-banner .preview-description {
+    display: none;
+  }
+  .app-shell .preview-banner {
+    gap: 8px;
+  }
+  .discover-toolbar {
+    gap: 8px;
+  }
+  .discover-toolbar .tag-scroller {
+    gap: 4px;
+  }
+  .app-shell .discover-toolbar .feed-tabs button {
+    padding: 8px 6px;
+    font-size: 12px;
+  }
+}

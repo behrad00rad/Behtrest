@@ -241,7 +241,7 @@
   object-fit: cover;
 }
 .board-detail-page .board-heading .eyebrow {
-  font-size: 10px;
+  font-size: 12px;
   letter-spacing: 1px;
   color: #bad0e4;
   margin-bottom: 10px;
@@ -293,7 +293,7 @@
   border: 1px solid #42576c;
   color: #d6e9fa;
   background: #203449;
-  font-size: 11px;
+  font-size: 12px;
   padding: 8px;
   border-radius: 7px;
 }
@@ -453,7 +453,7 @@
 .share-link-field {
   padding: 8px;
   display: block;
-  font-size: 11px;
+  font-size: 12px;
   color: #d8e8f6;
 }
 .share-link-field input {
@@ -464,7 +464,7 @@
   background: #101d2b;
   border-radius: 5px;
   color: #e2effa;
-  font-size: 11px;
+  font-size: 12px;
 }
 .detail-page {
   margin-top: 24px;
@@ -519,7 +519,7 @@
   margin-bottom: 24px;
 }
 .detail-date {
-  font-size: 10px;
+  font-size: 12px;
   color: #b9cbdd;
   margin-left: auto;
 }
@@ -548,7 +548,7 @@
   margin: 18px 0;
 }
 .detail-page .post-tags a {
-  font-size: 11px;
+  font-size: 12px;
   border: 1px solid #40576e;
   border-radius: 7px;
   padding: 5px 9px;
@@ -565,7 +565,7 @@
 }
 .detail-page .author-link small {
   color: #b3c7da;
-  font-size: 11px;
+  font-size: 12px;
 }
 .pin-owner-menu {
   display: block;
@@ -619,7 +619,7 @@
   background: #293c50;
   padding: 3px 7px;
   border-radius: 7px;
-  font-size: 11px;
+  font-size: 12px;
 }
 .detail-page .comment {
   position: relative;
@@ -642,7 +642,7 @@
 }
 .detail-page .comment-heading time {
   color: #b6c9dc;
-  font-size: 10px;
+  font-size: 12px;
 }
 .detail-page .comment p {
   color: #d3e1ee;
@@ -756,19 +756,19 @@
   display: flex;
   gap: 5px;
   padding: 7px 0;
-  font-size: 11px;
+  font-size: 12px;
   overflow-wrap: anywhere;
 }
 .shared-media-item small {
   display: block;
-  font-size: 10px;
+  font-size: 12px;
   color: #b6cce2;
   line-height: 1.5;
   padding: 7px 0 0;
   overflow-wrap: anywhere;
 }
 .shared-media-item button {
-  font-size: 11px;
+  font-size: 12px;
   color: #bee0ff;
 }
 .chat-jump-controls {
@@ -794,7 +794,7 @@
   color: #d9edff;
   padding: 8px 12px;
   box-shadow: 0 4px 12px #0004;
-  font-size: 11px;
+  font-size: 12px;
 }
 .unread-divider {
   display: flex;
@@ -802,7 +802,7 @@
   justify-content: center;
   gap: 12px;
   color: #b9dcff;
-  font-size: 11px;
+  font-size: 12px;
   padding: 16px 0;
 }
 .unread-divider::before,
@@ -855,7 +855,7 @@
     gap: 10px;
   }
   .toolbar-filters label {
-    font-size: 11px;
+    font-size: 12px;
   }
   .product-page .tabs button {
     padding: 9px 13px;
@@ -872,7 +872,7 @@
     font-size: 14px;
   }
   .product-page .board-card p {
-    font-size: 11px;
+    font-size: 12px;
   }
   .product-page .profile-header {
     padding: 20px;
@@ -926,11 +926,11 @@
   }
   .board-detail-page .board-heading .owner-actions button,
   .board-detail-page .board-heading .owner-actions a {
-    font-size: 11px;
+    font-size: 12px;
     padding: 8px 10px;
   }
   .board-action-button {
-    font-size: 10px;
+    font-size: 12px;
     padding: 7px 5px;
   }
   .detail-page .post-detail {
@@ -969,7 +969,7 @@
     padding: 10px 15px;
   }
   .detail-page .source-link {
-    font-size: 11px;
+    font-size: 12px;
   }
   .product-share-panel {
     max-width: calc(100vw - 85px);

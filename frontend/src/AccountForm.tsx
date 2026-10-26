@@ -50,12 +50,42 @@ export default function AccountForm({ mode }: { mode: Mode }) {
         .then((data) => setInviteRequired(data.invite_required))
         .catch((error) => setError(error));
   }, [mode]);
-  if (auth.user && (mode === "login" || mode === "register"))
+  if (
+    auth.user &&
+    (mode === "login" || (mode === "register" && !auth.user.is_guest))
+  )
     return <Navigate to="/" replace />;
   const copy = content[mode];
   const registering = mode === "register";
   const resetting = mode === "reset";
   const password = mode !== "forgot";
+  const preview = auth.previewMode;
+  const previewUrl =
+    import.meta.env.VITE_PREVIEW_URL ||
+    (import.meta.env.DEV
+      ? `${window.location.protocol}//${window.location.hostname}:5175/login`
+      : "");
+
+  async function enterPreview() {
+    setBusy(true);
+    setError(null);
+    try {
+      const session = await request<Session>("/auth/guest/", "POST", {});
+      auth.setUser(session.user);
+      navigate("/", { replace: true });
+    } catch (error) {
+      setError(
+        error instanceof ApiError
+          ? error
+          : new ApiError(
+              "unexpected",
+              "Unable to start the preview. Please try again.",
+            ),
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
 
   function fieldErrors(name: string) {
     const messages = error?.fields[name];
@@ -109,8 +139,48 @@ export default function AccountForm({ mode }: { mode: Mode }) {
       <section className="form-panel">
         <div className="form-wrap">
           <span className="eyebrow">{copy.kicker}</span>
-          <h2>{copy.title}</h2>
-          <p className="form-description">{copy.description}</p>
+          <h2>
+            {preview && registering ? "Make it your playground." : copy.title}
+          </h2>
+          <p className="form-description">
+            {preview
+              ? registering
+                ? "Just a username and password. No email or invite needed."
+                : "A little inspiration, ready to explore. No account needed."
+              : copy.description}
+          </p>
+          {(mode === "login" || registering) && (preview || previewUrl) && (
+            <div className="preview-entry">
+              {preview ? (
+                <button
+                  className="primary-button"
+                  type="button"
+                  onClick={() => void enterPreview()}
+                  disabled={busy}
+                >
+                  {busy ? "Opening preview…" : "Explore as a guest"}{" "}
+                  <ArrowRight size={18} />
+                </button>
+              ) : (
+                <a className="preview-button" href={previewUrl}>
+                  Try the preview <ArrowRight size={18} />
+                </a>
+              )}
+              <p>
+                {preview
+                  ? "No password, email, or referral code. Just look around."
+                  : "Explore sample pins and boards without creating an account."}
+              </p>
+              {preview && (
+                <span className="preview-divider">
+                  or{" "}
+                  {registering
+                    ? "create a preview account"
+                    : "sign in to your preview account"}
+                </span>
+              )}
+            </div>
+          )}
           {done ? (
             <div className="success-state" role="status">
               <span className="success-icon">
@@ -124,7 +194,7 @@ export default function AccountForm({ mode }: { mode: Mode }) {
             </div>
           ) : (
             <form onSubmit={submit} aria-label={copy.button}>
-              {registering && (
+              {registering && !preview && (
                 <label className="field" htmlFor="referral_code">
                   Referral code {inviteRequired ? "(required)" : "(optional)"}
                   <input
@@ -166,7 +236,7 @@ export default function AccountForm({ mode }: { mode: Mode }) {
                   {fieldErrors("username")}
                 </label>
               )}
-              {(registering || mode === "forgot") && (
+              {((registering && !preview) || mode === "forgot") && (
                 <label className="field" htmlFor="email">
                   Email address
                   <input
@@ -201,14 +271,18 @@ export default function AccountForm({ mode }: { mode: Mode }) {
                       type={visible ? "text" : "password"}
                       required
                       maxLength={1024}
-                      minLength={mode === "login" ? undefined : 10}
+                      minLength={
+                        mode === "login" ? undefined : preview ? 6 : 10
+                      }
                       autoComplete={
                         mode === "login" ? "current-password" : "new-password"
                       }
                       placeholder={
                         mode === "login"
                           ? "Your password"
-                          : "At least 10 characters"
+                          : preview
+                            ? "At least 6 characters"
+                            : "At least 10 characters"
                       }
                       aria-describedby={
                         error?.fields[
@@ -242,7 +316,7 @@ export default function AccountForm({ mode }: { mode: Mode }) {
                   </span>
                 </label>
               )}
-              {(registering || resetting) && (
+              {((registering && !preview) || resetting) && (
                 <label className="field" htmlFor="confirm-password">
                   Confirm password
                   <input
@@ -262,7 +336,7 @@ export default function AccountForm({ mode }: { mode: Mode }) {
                   {fieldErrors(registering ? "password2" : "new_password2")}
                 </label>
               )}
-              {mode === "login" && (
+              {mode === "login" && !preview && (
                 <div className="form-options">
                   <span>A little inspiration, every day.</span>
                   <Link to="/forgot-password">Forgot password?</Link>

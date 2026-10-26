@@ -13,6 +13,7 @@ import { clearUserDrafts } from "./chatDrafts";
 type AuthState = {
   user: User | null;
   loading: boolean;
+  previewMode: boolean;
   error: string;
   refresh: () => Promise<void>;
   setUser: (user: User | null) => void;
@@ -23,12 +24,15 @@ const AuthContext = createContext<AuthState | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [previewMode, setPreviewMode] = useState(false);
   const [error, setError] = useState("");
   const refresh = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      setUser((await getSession()).user);
+      const session = await getSession();
+      setUser(session.user);
+      setPreviewMode(Boolean(session.previewMode));
     } catch (error) {
       setError(
         error instanceof Error ? error.message : "Unable to load your account.",
@@ -54,7 +58,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
   return (
     <AuthContext.Provider
-      value={{ user, setUser, loading, error, refresh, signOut }}
+      value={{ user, setUser, loading, previewMode, error, refresh, signOut }}
     >
       {children}
     </AuthContext.Provider>

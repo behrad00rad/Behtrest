@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import type { FormEvent, ReactNode } from "react";
 import {
   ArrowRight,
@@ -10,6 +10,7 @@ import {
   House,
   MessageCircle,
   UserRound,
+  X,
 } from "lucide-react";
 import {
   Link,
@@ -22,19 +23,51 @@ import {
 } from "react-router-dom";
 import { Explore, Search, CreatePost, PostDetail } from "./Posts";
 import { MyBoards, ProfilePage, BoardDetail } from "./Collections";
-import { Avatar } from "./components";
+import { Avatar, Modal } from "./components";
 import { useAuth } from "./auth";
 import AccountForm from "./AccountForm";
 import ReferralSettings from "./ReferralSettings";
 import Chat from "./Chat";
 import { useChat } from "./ChatContext";
 import { ActivityNav, Notifications, Moderation } from "./Community";
+import Settings from "./Settings";
+import { ToastHost } from "./ProductUI";
+import { FirstRunInterests } from "./Interests";
+import Owl, { LogoOwl } from "./Owl";
+import { MotionLayer } from "./PlayfulMotion";
 
 function Header() {
   const chat = useChat();
   const auth = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const accountMenu = useRef<HTMLDetailsElement>(null);
+  const logoClicks = useRef<number[]>([]);
+  useEffect(() => {
+    const outside = (event: PointerEvent) => {
+      if (
+        event.target instanceof Node &&
+        !accountMenu.current?.contains(event.target) &&
+        accountMenu.current
+      )
+        accountMenu.current.open = false;
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && accountMenu.current?.open) {
+        accountMenu.current.open = false;
+        accountMenu.current.querySelector("summary")?.focus();
+      }
+    };
+    document.addEventListener("pointerdown", outside);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("pointerdown", outside);
+      document.removeEventListener("keydown", escape);
+    };
+  }, []);
+  useEffect(() => {
+    if (accountMenu.current) accountMenu.current.open = false;
+  }, [location.pathname]);
   const [query, setQuery] = useState(
     new URLSearchParams(location.search).get("q") || "",
   );
@@ -61,8 +94,26 @@ function Header() {
   return (
     <>
       <header className="site-header">
-        <Link className="wordmark" to="/" aria-label="Behtrest home">
-          <span className="brand-mark">b</span>behtrest
+        <Link
+          className="wordmark"
+          to="/"
+          aria-label="Behtrest home"
+          onClick={() => {
+            const now = performance.now();
+            logoClicks.current = [
+              ...logoClicks.current.filter((time) => now - time < 3000),
+              now,
+            ];
+            if (logoClicks.current.length >= 5) {
+              logoClicks.current = [];
+              window.dispatchEvent(new Event("owl-flight"));
+            }
+          }}
+        >
+          <span className="brand-mark brand-owl">
+            <LogoOwl />
+          </span>
+          behtrest
           <span className="brand-dot">.</span>
         </Link>
         {auth.user && (
@@ -82,52 +133,32 @@ function Header() {
         )}
         {auth.user && <ActivityNav />}
         <nav aria-label="Main navigation">
-          <Link className="story-link" to="/story">
-            Our story <ArrowUpRight size={14} />
-          </Link>
           {auth.user ? (
             <>
               <NavLink
-                className="quiet-button"
+                className="quiet-button header-icon"
+                title="Messages"
                 to="/messages"
                 aria-label="Messages"
               >
                 <MessageCircle size={17} />
-                <span className="nav-label">Messages</span>
+
                 {chat.unread + chat.requests > 0 && (
                   <b className="chat-badge">{chat.unread + chat.requests}</b>
                 )}
               </NavLink>
               <NavLink
-                className="quiet-button"
+                className="quiet-button header-icon"
+                title="Boards"
                 to="/boards"
                 aria-label="Your boards"
               >
                 <Bookmark size={17} />
-                <span className="nav-label">Boards</span>
               </NavLink>
               <Link className="nav-create" to="/create" aria-label="Create pin">
                 <Plus size={18} />
                 <span className="nav-label">Create</span>
               </Link>
-              <Link to={`/u/${auth.user.username}`} aria-label="Your profile">
-                <Avatar
-                  author={{
-                    username: auth.user.username,
-                    display_name: auth.user.profile.display_name,
-                    avatar: auth.user.profile.avatar,
-                  }}
-                  size="small"
-                />
-              </Link>
-              <button
-                className="quiet-button"
-                onClick={() => void signOut()}
-                disabled={busy}
-              >
-                <LogOut size={16} />
-                {busy ? "Signing out…" : "Sign out"}
-              </button>
             </>
           ) : (
             <Link className="nav-join" to="/register">
@@ -136,7 +167,34 @@ function Header() {
           )}
         </nav>
         {auth.user && (
-          <details className="mobile-account-menu">
+          <details
+            ref={accountMenu}
+            className="mobile-account-menu account-menu"
+            onKeyDown={(event) => {
+              if (!["ArrowDown", "ArrowUp", "Home", "End"].includes(event.key))
+                return;
+              event.preventDefault();
+              event.currentTarget.open = true;
+              const items = [
+                ...event.currentTarget.querySelectorAll<HTMLElement>(
+                  "a, button",
+                ),
+              ];
+              const index = items.indexOf(
+                document.activeElement as HTMLElement,
+              );
+              const next =
+                event.key === "Home"
+                  ? 0
+                  : event.key === "End"
+                    ? items.length - 1
+                    : (index +
+                        (event.key === "ArrowUp" ? -1 : 1) +
+                        items.length) %
+                      items.length;
+              items[next]?.focus();
+            }}
+          >
             <summary aria-label="Account menu">
               <Avatar
                 author={{
@@ -153,6 +211,7 @@ function Header() {
                 <Link to="/moderation">Moderation</Link>
               )}
               <Link to={`/u/${auth.user.username}`}>Your profile</Link>
+              <Link to="/settings">Settings</Link>
               <Link to="/story">Our story</Link>
               <button disabled={busy} onClick={() => void signOut()}>
                 <LogOut size={15} />
@@ -199,6 +258,44 @@ function Header() {
         </p>
       )}
     </>
+  );
+}
+
+function PreviewBanner() {
+  const { user } = useAuth();
+  const [dismissed, setDismissed] = useState(() => {
+    try {
+      return localStorage.getItem("behtrest-preview-banner-dismissed") === "1";
+    } catch {
+      return false;
+    }
+  });
+  if (dismissed) return null;
+  return (
+    <aside className="preview-banner" aria-label="Preview notice">
+      <strong>Preview playground</strong>
+      <span className="preview-description">Sample content only.</span>
+      {user?.is_guest && (
+        <>
+          <span className="guest-badge">Guest</span>
+          <Link to="/register">Create account</Link>
+        </>
+      )}
+      <button
+        type="button"
+        aria-label="Dismiss preview notice"
+        onClick={() => {
+          setDismissed(true);
+          try {
+            localStorage.setItem("behtrest-preview-banner-dismissed", "1");
+          } catch {
+            /* Dismiss for this visit if storage is unavailable. */
+          }
+        }}
+      >
+        <X size={16} />
+      </button>
+    </aside>
   );
 }
 
@@ -255,29 +352,90 @@ function Story() {
   );
 }
 
+function PinOverlay() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const feedScroll = useRef(location.state?.feedScroll ?? window.scrollY);
+  useEffect(() => {
+    const previous = document.body.style.overflow;
+    const restoration = window.history.scrollRestoration;
+    window.history.scrollRestoration = "manual";
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+      requestAnimationFrame(() => {
+        window.scrollTo(0, feedScroll.current);
+        requestAnimationFrame(() => {
+          window.history.scrollRestoration = restoration;
+        });
+      });
+    };
+  }, []);
+  useLayoutEffect(() => {
+    document.querySelector(".pin-detail-dialog")?.scrollTo(0, 0);
+  }, [location.pathname]);
+  const close = () => navigate(-Math.max(1, location.state?.pinDepth || 1));
+  return (
+    <Modal title="Pin details" className="pin-detail-dialog" close={close}>
+      <PostDetail key={location.pathname} onBack={close} />
+    </Modal>
+  );
+}
+
 export default function App() {
   const auth = useAuth();
   const location = useLocation();
+  const background = location.pathname.startsWith("/pin/")
+    ? location.state?.backgroundLocation
+    : undefined;
+  const wasOverlay = useRef(false);
+  const top = useRef<HTMLDivElement>(null);
+  const shell = useRef<HTMLDivElement>(null);
   useEffect(() => {
+    const element = top.current!;
+    const observer = new ResizeObserver(() =>
+      shell.current?.style.setProperty(
+        "--app-top-height",
+        `${element.getBoundingClientRect().height}px`,
+      ),
+    );
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, []);
+  useEffect(() => {
+    const previous = wasOverlay.current;
+    wasOverlay.current = Boolean(background);
+    if (background || previous) return;
     window.scrollTo(0, 0);
     document.getElementById("main-content")?.focus({ preventScroll: true });
-  }, [location.pathname]);
+  }, [location.pathname, background]);
   return (
-    <>
+    <div
+      ref={shell}
+      className={`app-shell ${location.pathname.startsWith("/messages") ? "is-messaging" : ""}`}
+    >
       <a className="skip-link" href="#main-content">
         Skip to content
       </a>
-      <Header />
+      <div className="app-top" ref={top}>
+        <Header />
+        {auth.previewMode && <PreviewBanner />}
+      </div>
+      <ToastHost />
+      <MotionLayer />
+      <FirstRunInterests key={auth.user?.id || "anonymous"} />
       <div
         id="main-content"
         className={
-          location.pathname.startsWith("/messages") ? "messaging-content" : ""
+          location.pathname.startsWith("/messages")
+            ? "page-container messaging-content"
+            : "page-container"
         }
         tabIndex={-1}
       >
         {auth.loading ? (
           <div className="loading-page" role="status">
-            <span className="loading-dot" />
+            <Owl state="think" />
             Making a little room…
           </div>
         ) : auth.error ? (
@@ -291,7 +449,15 @@ export default function App() {
             </button>
           </div>
         ) : (
-          <Routes>
+          <Routes location={background || location}>
+            <Route
+              path="/settings"
+              element={
+                <Protected>
+                  <Settings />
+                </Protected>
+              }
+            />
             <Route
               path="/settings/referrals"
               element={
@@ -353,6 +519,14 @@ export default function App() {
               element={
                 <Protected>
                   <CreatePost />
+                </Protected>
+              }
+            />
+            <Route
+              path="/pin/:id"
+              element={
+                <Protected>
+                  <PostDetail key={location.pathname} />
                 </Protected>
               }
             />
@@ -420,12 +594,24 @@ export default function App() {
           </Routes>
         )}
       </div>
+      {background && (
+        <Routes>
+          <Route
+            path="/pin/:id"
+            element={
+              <Protected>
+                <PinOverlay />
+              </Protected>
+            }
+          />
+        </Routes>
+      )}
       <footer
         className={`site-footer ${location.pathname.startsWith("/messages") ? "messaging-footer" : ""}`}
       >
         <span>A little space for big ideas.</span>
         <span>Originally made at 13. Still curious.</span>
       </footer>
-    </>
+    </div>
   );
 }

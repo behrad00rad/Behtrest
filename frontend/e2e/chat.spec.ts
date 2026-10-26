@@ -1,3 +1,4 @@
+import { completeInterests } from "./onboarding";
 import { expect, test, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { resolve } from "node:path";
@@ -16,8 +17,9 @@ async function register(page: Page, username: string) {
     .getByRole("button", { name: "Create account", exact: true })
     .click();
   await expect(
-    page.getByRole("heading", { name: "Find your next little thing." }),
+    page.getByRole("heading", { name: "Discover inspiration" }),
   ).toBeVisible();
+  await completeInterests(page);
 }
 
 test("two people: requests, live messages, image, edit, reaction, group and block", async ({

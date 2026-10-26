@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { Bell, Flag, Users } from "lucide-react";
 import { request } from "./api";
 import { useAuth } from "./auth";
+import { pluralize } from "./format";
 import { usePage, useResource } from "./hooks";
 import { Avatar, ErrorNotice, message, Modal } from "./components";
 import type { Author, Profile } from "./types";
@@ -60,7 +61,7 @@ export function ActivityNav() {
     >
       <Bell size={20} />
       {unread > 0 && (
-        <b aria-label={`${unread} unread notifications`}>
+        <b aria-label={pluralize(unread, "unread notification")}>
           {unread > 99 ? "99+" : unread}
         </b>
       )}
@@ -227,7 +228,7 @@ export function FollowControls({
     <div className="follow-controls">
       <div className="follow-counts">
         <button onClick={() => setList("followers")}>
-          {profile.follower_count || 0} followers
+          {pluralize(profile.follower_count || 0, "follower")}
         </button>
         <button onClick={() => setList("following")}>
           {profile.following_count || 0} following

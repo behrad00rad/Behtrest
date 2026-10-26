@@ -1,10 +1,15 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import type { ReactNode, FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { pluralize } from "./format";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ArrowRight, Bookmark, Check, Lock, Plus, X } from "lucide-react";
 import { ApiError, request } from "./api";
 import { useDebouncedValue, usePage } from "./hooks";
-import { SearchField } from "./ProductUI";
+import { SearchField, ShareControl, notify } from "./ProductUI";
+import { useAuth } from "./auth";
+import Owl from "./Owl";
+import { celebrateSave, useMasonry } from "./PlayfulMotion";
+import LikeButton from "./LikeButton";
 import type { Author, Board, Post } from "./types";
 
 export function message(error: unknown) {
@@ -43,11 +48,13 @@ export function Modal({
   close,
   children,
   busy = false,
+  className = "",
 }: {
   title: string;
   close: () => void;
   children: ReactNode;
   busy?: boolean;
+  className?: string;
 }) {
   const ref = useRef<HTMLDialogElement>(null);
   const id = useId();
@@ -66,7 +73,7 @@ export function Modal({
   return (
     <dialog
       ref={ref}
-      className="modal"
+      className={`modal ${className}`}
       role="dialog"
       aria-modal="true"
       aria-labelledby={id}
@@ -179,6 +186,7 @@ export function BoardForm({
   );
 }
 export function SaveDialog({ post, close }: { post: Post; close: () => void }) {
+  const { user } = useAuth();
   const [query, setQuery] = useState("");
   const settled = useDebouncedValue(query);
   const page = usePage<Board>(`/boards/?q=${encodeURIComponent(settled)}`);
@@ -191,6 +199,15 @@ export function SaveDialog({ post, close }: { post: Post; close: () => void }) {
     setError("");
     try {
       await request(`/boards/${board.id}/saves/`, "POST", { post_id: post.id });
+      try {
+        sessionStorage.setItem(
+          `behtrest-save-board:${user?.id}`,
+          String(board.id),
+        );
+      } catch {
+        /* Saving does not depend on browser storage. */
+      }
+      celebrateSave(post);
       setSaved(board);
     } catch (error) {
       setError(message(error));
@@ -267,7 +284,9 @@ export function SaveDialog({ post, close }: { post: Post; close: () => void }) {
                 <strong>{board.name}</strong>
                 {board.is_private && <Lock size={14} />}
                 <small>
-                  {busy === board.id ? "Saving…" : `${board.post_count} pins`}
+                  {busy === board.id
+                    ? "Saving…"
+                    : pluralize(board.post_count, "pin")}
                 </small>
               </button>
             ))}
@@ -310,22 +329,132 @@ export function SaveDialog({ post, close }: { post: Post; close: () => void }) {
     </Modal>
   );
 }
+function PinImage({ post }: { post: Post }) {
+  const ref = useRef<HTMLImageElement>(null);
+  const [state, setState] = useState<"loading" | "loaded" | "error">("loading");
+  useEffect(() => {
+    setState(
+      ref.current?.complete && ref.current.naturalWidth ? "loaded" : "loading",
+    );
+  }, [post.thumbnail]);
+  return (
+    <span className={`pin-media ${state}`}>
+      {state === "loading" && (
+        <span className="image-skeleton" aria-hidden="true" />
+      )}
+      <img
+        ref={ref}
+        src={post.thumbnail}
+        alt={post.alt_text || post.title}
+        width={post.width}
+        height={post.height}
+        loading="lazy"
+        style={{ aspectRatio: `${post.width}/${post.height}` }}
+        onLoad={() => setState("loaded")}
+        onError={() => setState("error")}
+      />
+      {state === "error" && (
+        <span className="image-unavailable">Image unavailable</span>
+      )}
+    </span>
+  );
+}
+
 export function PostGrid({
   endpoint,
   empty = "No pins here yet.",
   action,
   emptyDescription = "Good collections start with a little curiosity.",
   emptyAction,
+  feedFirst = false,
 }: {
   endpoint: string;
   empty?: string;
   action?: (post: Post) => ReactNode;
   emptyDescription?: string;
   emptyAction?: ReactNode;
+  feedFirst?: boolean;
 }) {
-  const page = usePage<Post>(endpoint);
+  const page = usePage<Post>(endpoint, feedFirst);
   const [saving, setSaving] = useState<Post | null>(null);
+  const [hidden, setHidden] = useState<number[]>([]);
+  useEffect(() => {
+    const hide = (event: Event) => {
+      if (event instanceof CustomEvent)
+        setHidden((values) => [...values, event.detail]);
+    };
+    window.addEventListener("pin-hidden", hide);
+    return () => window.removeEventListener("pin-hidden", hide);
+  }, []);
   const sentinel = useRef<HTMLDivElement>(null);
+  const grid = useRef<HTMLDivElement>(null);
+  const visibleItems = useMemo(
+    () => page.items.filter((post) => !hidden.includes(post.id)),
+    [page.items, hidden],
+  );
+  const longFeed = useMasonry(grid, visibleItems, feedFirst);
+  const navigate = useNavigate();
+  const location = useLocation();
+  const pinState = (post: Post) => ({
+    ...(location.pathname.startsWith("/pin/")
+      ? location.state?.backgroundLocation
+        ? {
+            backgroundLocation: location.state.backgroundLocation,
+            pinDepth: (location.state.pinDepth || 1) + 1,
+            feedScroll: location.state.feedScroll,
+          }
+        : {}
+      : feedFirst
+        ? {
+            backgroundLocation: location,
+            pinDepth: 1,
+            feedScroll: window.scrollY,
+          }
+        : {}),
+    pinPreview: {
+      width: post.width,
+      height: post.height,
+      image: post.thumbnail,
+    },
+    pinClick: true,
+  });
+  const { user } = useAuth();
+  const pendingClick = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const quickSaves = useRef(new Set<number>());
+  useEffect(
+    () => () => {
+      if (pendingClick.current) clearTimeout(pendingClick.current);
+    },
+    [],
+  );
+  async function quickSave(post: Post) {
+    if (quickSaves.current.has(post.id)) return;
+    quickSaves.current.add(post.id);
+    try {
+      const boards = await request<{ items: Board[] }>("/boards/");
+      let previous = "";
+      try {
+        previous =
+          sessionStorage.getItem(`behtrest-save-board:${user?.id}`) || "";
+      } catch {
+        /* Use the first current board. */
+      }
+      const board =
+        boards.items.find((item) => String(item.id) === previous) ||
+        boards.items[0];
+      if (!board) {
+        setSaving(post);
+        return;
+      }
+      await request(`/boards/${board.id}/saves/`, "POST", { post_id: post.id });
+      celebrateSave(post, true);
+      notify(`Saved to ${board.name}`);
+    } catch (error) {
+      notify(message(error));
+    } finally {
+      quickSaves.current.delete(post.id);
+    }
+  }
   useEffect(() => {
     if (!page.cursor || page.loading || page.error) return;
     const observer = new IntersectionObserver(
@@ -339,20 +468,107 @@ export function PostGrid({
   }, [page.cursor, page.loading, page.error, page.loadMore]);
   return (
     <>
-      <div className="pin-grid">
-        {page.items.map((post) => (
-          <article className="pin-card" key={post.id}>
+      <div className="pin-grid" ref={grid} aria-busy={page.loading}>
+        {visibleItems.map((post, index) => (
+          <article
+            className={`pin-card ${feedFirst ? "feed-pin" : ""}`}
+            key={post.id}
+            data-pin-id={post.id}
+            style={
+              feedFirst
+                ? { animationDelay: `${(index % 8) * 20}ms` }
+                : undefined
+            }
+            tabIndex={feedFirst ? 0 : undefined}
+            aria-label={feedFirst ? post.title : undefined}
+          >
             <div className="pin-image">
-              <Link to={`/posts/${post.id}`}>
-                <img
-                  src={post.thumbnail}
-                  alt={post.alt_text || post.title}
-                  width={post.width}
-                  height={post.height}
-                  loading="lazy"
-                  style={{ aspectRatio: `${post.width}/${post.height}` }}
-                />
+              <Link
+                className="pin-open"
+                to={`/pin/${post.id}`}
+                state={pinState(post)}
+                onClick={(event) => {
+                  if (
+                    !feedFirst ||
+                    event.ctrlKey ||
+                    event.metaKey ||
+                    event.shiftKey ||
+                    event.altKey
+                  )
+                    return;
+                  event.preventDefault();
+                  const state = pinState(post);
+                  if (pendingClick.current) clearTimeout(pendingClick.current);
+                  if (event.detail === 0)
+                    navigate(`/pin/${post.id}`, { state });
+                  if (event.detail === 1)
+                    pendingClick.current = setTimeout(
+                      () =>
+                        navigate(`/pin/${post.id}`, {
+                          state,
+                        }),
+                      300,
+                    );
+                }}
+                onDoubleClick={(event) => {
+                  if (!feedFirst) return;
+                  event.preventDefault();
+                  if (pendingClick.current) clearTimeout(pendingClick.current);
+                  void quickSave(post);
+                }}
+              >
+                <PinImage post={post} />
+                {!feedFirst && (
+                  <span className="pin-hover-copy">
+                    <strong>{post.title}</strong>
+                    <span>
+                      {post.owner.display_name || post.owner.username}
+                    </span>
+                  </span>
+                )}
               </Link>
+              {feedFirst && (
+                <>
+                  <LikeButton post={post} compact />
+                  <div className="pin-hover-copy">
+                    <Link
+                      className="pin-overlay-title"
+                      onClick={(event) => {
+                        if (
+                          !event.ctrlKey &&
+                          !event.metaKey &&
+                          !event.shiftKey &&
+                          !event.altKey
+                        ) {
+                          event.preventDefault();
+                          navigate(`/pin/${post.id}`, {
+                            state: pinState(post),
+                          });
+                        }
+                      }}
+                      to={`/pin/${post.id}`}
+                      state={pinState(post)}
+                    >
+                      {post.title}
+                    </Link>
+                    <Link
+                      className="pin-overlay-author"
+                      to={`/u/${encodeURIComponent(post.owner.username)}`}
+                    >
+                      <Avatar author={post.owner} size="tiny" />
+                      <span>
+                        {post.owner.display_name || post.owner.username}
+                      </span>
+                    </Link>
+                  </div>
+                  <ShareControl
+                    compact
+                    title={post.title}
+                    path={`/pin/${post.id}`}
+                    chat={`/messages?pin=${post.id}`}
+                  />
+                </>
+              )}
               <button
                 className="pin-save"
                 onClick={() => setSaving(post)}
@@ -366,34 +582,43 @@ export function PostGrid({
                 Save
               </button>
             </div>
-            <div className="pin-card-content">
-              <Link className="pin-title" to={`/posts/${post.id}`}>
-                {post.title}
-              </Link>
-              {post.moderation_status &&
-                post.moderation_status !== "approved" && (
-                  <small className="muted">
-                    {post.moderation_status === "rejected"
-                      ? "Image blocked"
-                      : post.moderation_status === "review"
-                        ? "Awaiting review"
-                        : "Processing image"}{" "}
-                    · Only you
-                  </small>
-                )}
-              <div className="pin-owner">
-                <Link to={`/u/${encodeURIComponent(post.owner.username)}`}>
-                  <Avatar author={post.owner} size="tiny" />
-                  <span>{post.owner.display_name || post.owner.username}</span>
+            {!feedFirst && (
+              <div className="pin-card-content">
+                <Link
+                  className="pin-title"
+                  to={`/pin/${post.id}`}
+                  state={pinState(post)}
+                >
+                  {post.title}
                 </Link>
-                {action?.(post)}
+                {post.moderation_status &&
+                  post.moderation_status !== "approved" && (
+                    <small className="muted">
+                      {post.moderation_status === "rejected"
+                        ? "Image blocked"
+                        : post.moderation_status === "review"
+                          ? "Awaiting review"
+                          : "Processing image"}{" "}
+                      · Only you
+                    </small>
+                  )}
+                <div className="pin-owner">
+                  <Link to={`/u/${encodeURIComponent(post.owner.username)}`}>
+                    <Avatar author={post.owner} size="tiny" />
+                    <span>
+                      {post.owner.display_name || post.owner.username}
+                    </span>
+                  </Link>
+                  {action?.(post)}
+                </div>
               </div>
-            </div>
+            )}
           </article>
         ))}
       </div>
       {page.loading && (
         <div className="feed-status" role="status">
+          {feedFirst && <Owl state="think" />}
           {page.items.length
             ? "Finding a little more…"
             : "Gathering inspiration…"}
@@ -410,8 +635,8 @@ export function PostGrid({
       )}
       {!page.loading && !page.error && !page.items.length && (
         <div className="empty-state">
-          <Bookmark size={32} />
-          <h2>{empty}</h2>
+          {feedFirst ? <Owl state="sleep" /> : <Bookmark size={32} />}
+          <h2>{feedFirst ? "Nothing more tonight. Stay curious." : empty}</h2>
           <p>{emptyDescription}</p>
           {emptyAction || (
             <Link className="text-link" to="/create">
@@ -428,8 +653,18 @@ export function PostGrid({
           >
             Load more inspiration
           </button>
-        ) : !page.loading && !page.error && page.items.length > 0 ? (
-          <span>You’ve seen everything here. Stay curious.</span>
+        ) : !page.loading &&
+          !page.error &&
+          page.items.length > 0 &&
+          (!feedFirst || longFeed) ? (
+          feedFirst ? (
+            <div className="owl-end">
+              <Owl state="sleep" />
+              <span>Nothing more tonight. Stay curious.</span>
+            </div>
+          ) : (
+            <span>You’ve seen everything here. Stay curious.</span>
+          )
         ) : null}
       </div>
       {saving && <SaveDialog post={saving} close={() => setSaving(null)} />}
@@ -453,9 +688,7 @@ export function BoardCard({ board }: { board: Board }) {
         )}
       </div>
       <h3>{board.name}</h3>
-      <p>
-        {board.post_count} {board.post_count === 1 ? "pin" : "pins"}
-      </p>
+      <p>{pluralize(board.post_count, "pin")}</p>
     </Link>
   );
 }

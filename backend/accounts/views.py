@@ -1,3 +1,5 @@
+import uuid
+
 from django.conf import settings
 from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.contrib.auth.forms import PasswordResetForm, SetPasswordForm
@@ -16,24 +18,62 @@ from .models import RegistrationPolicy, Referral, ReferralRedemption
 
 def serialize_user(user):
     from collection.models import ImageScan
+    from .preview import is_guest_user
     scan = ImageScan.objects.filter(profile=user.profile).exclude(status__in=['approved', 'canceled']).order_by('-id').first()
     return {
         "id": user.pk, "username": user.username, "email": user.email,
+        "is_guest": is_guest_user(user),
         "can_moderate": user.is_staff and user.has_perm("collection.review_reports"),
         "can_manage_referrals": user.is_staff and user.has_perms(["accounts.change_registrationpolicy", "accounts.change_referral"]),
-        "profile": {"display_name": user.profile.display_name, "bio": user.profile.bio, "avatar": user.profile.avatar.url if user.profile.avatar else None, "avatar_scan": {"id": scan.pk, "status": scan.status} if scan else None},
+        "profile": {"display_name": user.profile.display_name, "bio": user.profile.bio, "interests": user.profile.interests, "avatar": user.profile.avatar.url if user.profile.avatar else None, "avatar_scan": {"id": scan.pk, "status": scan.status} if scan else None},
     }
 
 
 @never_cache
 @endpoint(["GET"])
 def session(request):
-    return success({"user": serialize_user(request.user) if request.user.is_authenticated else None, "csrfToken": get_token(request)})
+    return success({"user": serialize_user(request.user) if request.user.is_authenticated else None, "csrfToken": get_token(request), "previewMode": settings.PREVIEW_MODE})
+
+
+@never_cache
+@endpoint(["POST"], rate=(60, 3600))
+def guest(request):
+    if not settings.PREVIEW_MODE:
+        raise ApiError('not_found', 'Guest access is available in the preview only.', 404)
+    if not request.user.is_authenticated:
+        from .preview import starter_content
+        identity = uuid.uuid4().hex
+        with transaction.atomic():
+            user = get_user_model().objects.create_user(username=f'guest_{identity[:16]}', email=f'{identity}@preview.invalid', password=None)
+            user.profile.display_name = 'Curious guest'
+            user.profile.bio = 'Exploring the Behtrest preview.'
+            user.profile.save()
+            starter_content(user)
+        login(request, user)
+    return success({'user': serialize_user(request.user), 'csrfToken': get_token(request), 'previewMode': True})
 
 
 @never_cache
 @endpoint(["POST"], rate=(5, 3600), account_field="email")
 def register(request):
+    if settings.PREVIEW_MODE:
+        from .preview import starter_content, is_guest_user
+        data = {**request.data, 'email': f'{uuid.uuid4().hex}@preview.invalid', 'password2': request.data.get('password1', '')}
+        form = validate_form(RegistrationForm(data))
+        with transaction.atomic():
+            if is_guest_user(request.user):
+                user = request.user
+                user.username = form.cleaned_data['username']
+                user.set_password(form.cleaned_data['password1'])
+                user.save(update_fields=['username', 'password'])
+                if user.profile.display_name == 'Curious guest':
+                    user.profile.display_name = user.username
+                    user.profile.save(update_fields=['display_name'])
+            else:
+                user = form.save()
+            starter_content(user)
+        login(request, user)
+        return success({'user': serialize_user(user), 'csrfToken': get_token(request)}, 201)
     form = validate_form(RegistrationForm(request.data))
     with transaction.atomic():
         policy, _ = RegistrationPolicy.objects.get_or_create(pk=1)
@@ -61,6 +101,8 @@ def register(request):
 @never_cache
 @endpoint(["GET"])
 def registration_policy(request):
+    if settings.PREVIEW_MODE:
+        return success({'invite_required': False})
     policy, _ = RegistrationPolicy.objects.get_or_create(pk=1)
     return success({"invite_required": policy.invite_required})
 
@@ -118,6 +160,25 @@ def password_reset(request):
         subject_template_name="accounts/password_reset_subject.txt",
     )
     return success({"message": "If an account matches that email, a reset link has been sent."})
+
+
+@never_cache
+@endpoint(['PATCH'], authenticated=True, rate=(30, 60))
+def update_interests(request):
+    from collection.models import Tag
+    from collection.views import posts_query
+    value = request.data.get('interests')
+    if set(request.data) != {'interests'} or not isinstance(value, str) or len(value) > 700:
+        raise ApiError('invalid_interests', 'Choose between 3 and 16 interests.')
+    names = sorted(set(name.strip().lower() for name in value.split(',') if name.strip()))
+    available = set(Tag.objects.filter(name__in=names, posts__in=posts_query()).values_list('name', flat=True))
+    if not 3 <= len(names) <= 16 or available != set(names):
+        raise ApiError('invalid_interests', 'Choose at least 3 available interests (up to 16).', fields={'interests': ['Choose interests from the available tags.']})
+    request.user.profile.interests = names
+    request.user.profile.save(update_fields=['interests'])
+    from collection.recommender import seed_weights
+    seed_weights(request.user, names)
+    return success({'user': serialize_user(request.user)})
 
 
 @never_cache

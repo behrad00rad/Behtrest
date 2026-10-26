@@ -1,7 +1,14 @@
 from django.urls import path
 from . import views
+from . import pins
 
 urlpatterns = [
+    path('pins/<int:pk>/likes/', pins.like),
+    path('pins/<int:pk>/events/', pins.event),
+    path('pins/<int:pk>/related/', pins.related),
+    path('pins/<int:pk>/related', pins.related),
+    path('feed', views.feed),
+    path('profiles/<str:username>/liked/', pins.liked),
     path('feed/', views.feed),
     path('posts/', views.create_post),
     path('posts/<int:pk>/', views.post_owner_actions),

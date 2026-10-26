@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ImageCheck } from "./ImageCheck";
 import Referrals from "./Referrals";
+import { pluralize } from "./format";
 import type { FormEvent } from "react";
 import {
   Link,
@@ -292,15 +293,15 @@ function EditProfile({
         />
       )}
       <div className="avatar-editor">
-        <Avatar
-          author={{
-            username: profile.username,
-            display_name: profile.display_name,
-            avatar: currentAvatar || null,
-          }}
-        />
-        <label className="secondary-button">
-          Change picture
+        <label className="avatar-change-control">
+          <Avatar
+            author={{
+              username: profile.username,
+              display_name: profile.display_name,
+              avatar: currentAvatar || null,
+            }}
+          />
+          <span>Change picture</span>
           <input
             type="file"
             accept="image/jpeg,image/png,image/webp"
@@ -344,10 +345,20 @@ function EditProfile({
           />
         </label>
         <ErrorNotice error={error} />
-        <button className="primary-button" disabled={busy}>
-          {busy ? "Saving…" : "Save profile"}
-          <Check size={17} />
-        </button>
+        <div className="form-actions">
+          <button
+            className="secondary-button"
+            type="button"
+            disabled={busy}
+            onClick={close}
+          >
+            Cancel
+          </button>
+          <button className="primary-button" disabled={busy}>
+            {busy ? "Saving…" : "Save profile"}
+            <Check size={17} />
+          </button>
+        </div>
       </form>
     </Modal>
   );
@@ -360,7 +371,12 @@ export function ProfilePage() {
     `/profiles/${encodeURIComponent(username)}/`,
   );
   const [params, setParams] = useSearchParams();
-  const tab = params.get("tab") === "boards" ? "boards" : "pins";
+  const tab =
+    params.get("tab") === "boards"
+      ? "boards"
+      : params.get("tab") === "liked" && auth.user?.username === username
+        ? "liked"
+        : "pins";
   const [editing, setEditing] = useState(false);
   const [pinQuery, setPinQuery] = useState("");
   const settledPins = useDebouncedValue(pinQuery);
@@ -385,8 +401,14 @@ export function ProfilePage() {
     <main className="collection-page product-page profile-page">
       <section className="profile-header">
         <Avatar author={profile} />
-        <h1>{profile.display_name || profile.username}</h1>
-        <p className="profile-username">@{profile.username}</p>
+        <h1>
+          {own && auth.user?.is_guest
+            ? "Guest"
+            : profile.display_name || profile.username}
+        </h1>
+        {!(own && auth.user?.is_guest) && (
+          <p className="profile-username">@{profile.username}</p>
+        )}
         {!own && (
           <Link
             className="secondary-button"
@@ -397,8 +419,8 @@ export function ProfilePage() {
         )}
         {profile.bio && <p className="profile-bio">{profile.bio}</p>}
         <p className="profile-counts">
-          {profile.post_count} pins <span>·</span> {profile.board_count}{" "}
-          {own ? "boards" : "public boards"}
+          {pluralize(profile.post_count, "pin")} <span>·</span>{" "}
+          {pluralize(profile.board_count, own ? "board" : "public board")}
         </p>
         {own && (
           <button className="secondary-button" onClick={() => setEditing(true)}>
@@ -410,6 +432,15 @@ export function ProfilePage() {
       <FollowControls profile={profile} reload={resource.reload} />
       {own && <Referrals />}
       <div className="tabs profile-tabs">
+        {own && (
+          <button
+            className={tab === "liked" ? "active" : ""}
+            aria-pressed={tab === "liked"}
+            onClick={() => setParams({ tab: "liked" })}
+          >
+            Liked
+          </button>
+        )}
         <button
           className={tab === "pins" ? "active" : ""}
           aria-pressed={tab === "pins"}
@@ -441,7 +472,18 @@ export function ProfilePage() {
           )}
         </div>
       )}
-      {tab === "pins" ? (
+      {tab === "liked" ? (
+        <PostGrid
+          endpoint={`/profiles/${encodeURIComponent(profile.username)}/liked/`}
+          empty="No liked pins yet"
+          emptyDescription="Tap a heart on a pin to keep it here."
+          emptyAction={
+            <Link className="secondary-button" to="/">
+              Explore pins
+            </Link>
+          }
+        />
+      ) : tab === "pins" ? (
         <PostGrid
           endpoint={`/feed/?owner=${encodeURIComponent(profile.username)}&q=${encodeURIComponent(settledPins)}`}
           empty={
@@ -484,6 +526,16 @@ export function ProfilePage() {
           changed={resource.reload}
         />
       )}{" "}
+      {own && !profile.post_count && (
+        <div className="empty-profile-actions">
+          <Link className="secondary-button" to="/">
+            Save your first pin
+          </Link>
+          <Link className="secondary-button" to="/boards">
+            Create a board
+          </Link>
+        </div>
+      )}
       {editing && (
         <EditProfile
           profile={profile}
@@ -605,7 +657,7 @@ export function BoardDetail() {
         <h1>{board.name}</h1>
         {board.description && <p>{board.description}</p>}
         <span className="muted">
-          {board.post_count} pins ·{" "}
+          {pluralize(board.post_count, "pin")} ·{" "}
           <Link to={`/u/${board.owner}`}>@{board.owner}</Link>
         </span>
         {own && (

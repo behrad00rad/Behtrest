@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { request } from "./api";
 import { Link } from "react-router-dom";
 import { useAuth } from "./auth";
+import { pluralize } from "./format";
+import { notify } from "./ProductUI";
 
 type Invite = {
   code: string;
@@ -27,7 +29,8 @@ export default function Referrals() {
       await navigator.clipboard.writeText(
         `${window.location.origin}/register?ref=${encodeURIComponent(invite.code)}`,
       );
-      setMessage("Invite link copied.");
+      setMessage("");
+      notify("Copied invite link");
     } catch {
       setMessage("Copy the code below and share it with your friend.");
     }
@@ -36,6 +39,7 @@ export default function Referrals() {
     <section className="image-check" aria-label="Your invites">
       <div>
         <h3>Invite friends</h3>
+        <p>Invite codes let a friend join when registration is invite-only.</p>
         {auth.user?.can_manage_referrals && (
           <Link className="text-link" to="/settings/referrals">
             Manage invites
@@ -44,10 +48,10 @@ export default function Referrals() {
         {invite && (
           <>
             <p>
-              {invite.remaining} invites remaining · {invite.used} used of{" "}
-              {invite.limit}
+              {pluralize(invite.remaining, "invite")} remaining · {invite.used}{" "}
+              used of {invite.limit}
             </p>
-            <p>
+            <p className="invite-code">
               <code>{invite.code}</code>
             </p>
             <button

@@ -1,0 +1,324 @@
+/* One route-independent shell owns header geometry and page gutters. */
+.app-shell .account-menu {
+  display: block;
+  position: relative;
+  flex: none;
+  margin-left: 0;
+}
+.app-shell .account-menu > div {
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--elevated);
+  border: 1px solid var(--border);
+  min-width: 200px;
+  z-index: 50;
+}
+.app-shell .account-menu summary {
+  display: grid;
+  place-items: center;
+  min-width: 40px;
+  min-height: 40px;
+}
+.app-shell .account-menu :is(a, button) {
+  color: var(--text-primary);
+  min-height: 40px;
+}
+.app-shell .account-menu :is(a, button):hover {
+  background: var(--surface);
+}
+.app-shell .site-header .header-icon {
+  position: relative;
+  width: 40px;
+  height: 40px;
+  padding: 8px;
+  justify-content: center;
+  flex: none;
+}
+.app-shell .site-header .header-icon svg {
+  flex: none;
+}
+.app-shell .site-header .header-icon .chat-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  padding: 0 4px;
+  min-width: 16px;
+  line-height: 18px;
+}
+.app-shell
+  :is(.header-search, .product-search, .messenger-search)
+  :is(input, textarea):not([type="checkbox"]):not([type="file"]) {
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  padding: 0;
+  height: 40px;
+}
+.app-shell
+  .composer-input-row
+  textarea:not([type="checkbox"]):not([type="file"]) {
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+}
+.app-shell .site-header .header-search {
+  padding: 0 12px;
+  height: 40px;
+  min-height: 40px;
+}
+.app-shell .site-header nav {
+  gap: 8px;
+}
+.app-shell .site-header .activity-trigger {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+}
+.app-shell .preview-banner {
+  min-height: 36px;
+  padding: 4px var(--page-gutter);
+  gap: 12px;
+  flex-wrap: nowrap;
+  font-size: 12px;
+}
+.app-shell .preview-banner button {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  background: transparent;
+  color: var(--text-primary);
+}
+.settings-section {
+  display: grid;
+  justify-items: start;
+  gap: 16px;
+  max-width: 720px;
+  padding: 24px;
+  background: var(--surface);
+  border-radius: 16px;
+}
+:root {
+  --content-width: 1800px;
+  --page-gutter: 24px;
+}
+html {
+  scrollbar-gutter: stable;
+}
+.app-shell {
+  min-height: 100dvh;
+}
+.app-top {
+  flex: none;
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: transparent;
+}
+.app-top::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(16px);
+  pointer-events: none;
+}
+.app-shell .site-header,
+body:has(.messaging-content) .app-shell .site-header {
+  width: 100%;
+  max-width: var(--content-width);
+  height: 88px;
+  min-height: 88px;
+  margin: 0 auto;
+  padding: 0 var(--page-gutter);
+  border: 0;
+  gap: 16px;
+  background: transparent;
+}
+.app-shell .site-header .wordmark {
+  font-size: 26px;
+  flex-shrink: 0;
+}
+.app-shell .site-header .brand-mark {
+  width: 32px;
+  height: 36px;
+  font-size: 30px;
+  line-height: 32px;
+}
+.app-shell .site-header .header-search {
+  flex: 1;
+  min-width: 0;
+  max-width: none;
+  margin: 0;
+}
+.page-container {
+  width: 100%;
+  max-width: var(--content-width);
+  margin: 0 auto;
+  padding: 0 var(--page-gutter);
+  min-width: 0;
+}
+.page-container > :is(.collection-page, .story-page) {
+  width: 100%;
+  max-width: none;
+  padding: 0;
+  margin: 24px 0 32px;
+}
+.app-shell .site-footer {
+  width: 100%;
+  max-width: var(--content-width);
+  padding: 24px var(--page-gutter);
+}
+.app-shell.is-messaging {
+  height: 100dvh;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+body:has(.messaging-content) {
+  overflow: auto;
+}
+.app-shell .messaging-content,
+.app-shell .messaging-content:has(.has-conversation) {
+  flex: 1;
+  min-height: 0;
+  height: auto;
+  padding-bottom: 24px;
+}
+.page-container > .messenger.chat-page {
+  height: 100%;
+  padding: 24px 0 0;
+  margin: 0;
+  max-width: none;
+}
+/* Structural separators must never paint a rule across the content area. */
+.app-shell
+  :is(.site-header, .site-footer, .mobile-nav, .page-heading, .filter-bar) {
+  border: 0;
+}
+.app-shell
+  :is(.header-search, .product-search, .messenger-search, .composer-input-row)
+  input:focus,
+.app-shell
+  :is(.header-search, .product-search, .messenger-search, .composer-input-row)
+  textarea:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+.tag-scroller {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  align-items: center;
+  gap: 8px;
+}
+.tag-scroller .filter-chips {
+  min-width: 0;
+  flex: 1;
+  overflow-x: auto;
+  mask-image: none;
+  padding: 4px;
+  scroll-padding: 8px;
+}
+.tag-scroll-arrow {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 36px;
+  background: var(--surface-1);
+  color: var(--text-primary);
+  border: 0;
+}
+.tag-scroll-arrow:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+@media (max-width: 900px) {
+  .app-shell .site-header nav {
+    gap: 8px;
+  }
+  .app-shell .site-header .story-link {
+    display: none;
+  }
+}
+@media (max-width: 650px) {
+  :root {
+    --page-gutter: 24px;
+  }
+  .app-shell .site-header:has(.header-search),
+  body:has(.messaging-content) .app-shell .site-header:has(.header-search) {
+    height: 112px;
+    min-height: 112px;
+    padding: 12px var(--page-gutter);
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .app-shell .site-header .header-search {
+    display: flex;
+    flex-basis: 100%;
+    max-width: none;
+    order: 3;
+  }
+  .app-shell .site-header .mobile-account-menu {
+    display: block;
+    margin-left: auto;
+  }
+  .app-shell .site-header nav,
+  body:has(.messaging-content) .app-shell .site-header nav {
+    display: flex;
+    gap: 4px;
+  }
+  .app-shell .site-header .wordmark {
+    font-size: 20px;
+  }
+  .app-shell .site-header .brand-mark {
+    width: 28px;
+    height: 32px;
+    margin-right: 8px;
+  }
+  .app-shell
+    .site-header
+    :is(.header-icon, .activity-trigger, .account-menu summary) {
+    min-width: 32px;
+    width: 32px;
+    height: 36px;
+    min-height: 36px;
+    padding: 4px;
+  }
+  .app-shell .site-header .nav-create {
+    min-width: 36px;
+    height: 36px;
+    padding: 8px;
+  }
+  .app-shell .site-header .nav-label {
+    display: none;
+  }
+  .app-shell .site-header .mobile-account-menu {
+    margin-left: 0;
+  }
+  .app-shell .preview-banner {
+    gap: 8px;
+    font-size: 12px;
+  }
+  .app-shell :is(input, textarea, select) {
+    font-size: 16px;
+  }
+  .page-container > .collection-page {
+    margin-bottom: 96px;
+  }
+  .app-shell .messaging-content {
+    padding-bottom: 84px;
+  }
+  .app-shell .messaging-content:has(.has-conversation) {
+    padding-bottom: 0;
+  }
+  .page-container > .messenger.chat-page {
+    padding-top: 16px;
+  }
+}

@@ -81,6 +81,8 @@ X_FRAME_OPTIONS = "DENY"
 # Rate buckets are persisted in SQLite, shared by all Django workers.
 # REMOTE_ADDR is authoritative; forwarding headers are deliberately not trusted.
 API_RATE_LIMITS_ENABLED = True
+# Only config.preview_settings enables passwordless guest access.
+PREVIEW_MODE = False
 IMAGE_MODERATION_ENABLED = os.environ.get("BEHTREST_IMAGE_MODERATION", "0") == "1"
 IMAGE_UPLOADS_PER_DAY = int(os.environ.get("BEHTREST_IMAGE_UPLOADS_PER_DAY", "100"))
 IMAGE_PENDING_PER_USER = int(os.environ.get("BEHTREST_IMAGE_PENDING_PER_USER", "20"))

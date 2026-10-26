@@ -1,4 +1,5 @@
 export type User = {
+  is_guest?: boolean;
   can_manage_referrals?: boolean;
   can_moderate: boolean;
   id: number;
@@ -7,11 +8,16 @@ export type User = {
   profile: {
     display_name: string;
     bio: string;
+    interests?: string[];
     avatar: string | null;
     avatar_scan?: { id: number; status: string } | null;
   };
 };
-export type Session = { user: User | null; csrfToken: string };
+export type Session = {
+  user: User | null;
+  csrfToken: string;
+  previewMode?: boolean;
+};
 
 export class ApiError extends Error {
   constructor(

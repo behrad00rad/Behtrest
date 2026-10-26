@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { ImageCheck } from "./ImageCheck";
 import type { FormEvent } from "react";
 import {
   Link,
   useNavigate,
+  useLocation,
   useParams,
   useSearchParams,
 } from "react-router-dom";
@@ -13,7 +14,6 @@ import {
   ArrowUpRight,
   Bookmark,
   Check,
-  ImagePlus,
   Pencil,
   Trash2,
   Upload,
@@ -25,7 +25,12 @@ import {
 import { request, upload } from "./api";
 import { useAuth } from "./auth";
 import { usePage, useResource } from "./hooks";
-import { SearchField, ShareControl } from "./ProductUI";
+import { SearchField, ShareControl, notify } from "./ProductUI";
+import { ApiError } from "./api";
+import DiscoverTags from "./DiscoverTags";
+import Owl from "./Owl";
+import LikeButton from "./LikeButton";
+import { recordPinEvent } from "./pinEvents";
 import { ReportButton } from "./Community";
 import type { Author, Comment, Post } from "./types";
 import {
@@ -38,76 +43,57 @@ import {
 } from "./components";
 
 export function Explore() {
+  const { user } = useAuth();
   const [params, setParams] = useSearchParams();
   const tag = params.get("tag") || "";
   const following = params.get("feed") === "following";
   const tags = useResource<{ items: string[] }>("/tags/");
+  const accessoryIndex = useRef(0);
+  useEffect(() => {
+    const accessories = ["none", "mug", "backpack", "lamp"];
+    window.dispatchEvent(
+      new CustomEvent("owl-accessory", {
+        detail: accessories[accessoryIndex.current++ % accessories.length],
+      }),
+    );
+  }, [tag]);
   return (
     <main className="collection-page explore-page">
-      <div className="page-heading">
-        <div className="page-heading-copy">
-          <h1>
-            Find your next <em>little thing.</em>
-          </h1>
-          <p>Discover ideas worth saving.</p>
-        </div>
-        <Link className="secondary-button" to="/create">
-          <ImagePlus size={17} />
-          Share a pin
-        </Link>
-      </div>
-      <div className="tabs feed-tabs">
-        <button
-          className={!following ? "active" : ""}
-          aria-pressed={!following}
-          onClick={() => setParams(tag ? { tag } : {})}
-        >
-          Discover
-        </button>
-        <button
-          className={following ? "active" : ""}
-          aria-pressed={following}
-          onClick={() =>
-            setParams({ ...(tag ? { tag } : {}), feed: "following" })
-          }
-        >
-          Following
-        </button>
-      </div>
-      <div className="filter-bar">
-        <span className="filter-label">Browse tags</span>
-        <div className="filter-chips" aria-label="Filter by tag">
+      <h1 className="sr-only">Discover inspiration</h1>
+      <div className="discover-toolbar">
+        <div className="tabs feed-tabs">
           <button
-            className={!tag ? "active" : ""}
-            aria-pressed={!tag}
-            onClick={() => setParams(following ? { feed: "following" } : {})}
+            className={!following ? "active" : ""}
+            aria-pressed={!following}
+            onClick={() => setParams(tag ? { tag } : {})}
           >
-            All pins
+            Discover
           </button>
-          {(tags.data?.items || []).slice(0, 12).map((item) => (
-            <button
-              key={item}
-              className={tag === item ? "active" : ""}
-              aria-pressed={tag === item}
-              onClick={() =>
-                setParams({
-                  tag: item,
-                  ...(following ? { feed: "following" } : {}),
-                })
-              }
-            >
-              {item.replaceAll("-", " ")}
-            </button>
-          ))}
-          {tag && !tags.data?.items.slice(0, 12).includes(tag) && (
-            <button className="active" onClick={() => setParams({})}>
-              #{tag} <X size={13} />
-            </button>
-          )}
+          <button
+            className={following ? "active" : ""}
+            aria-pressed={following}
+            onClick={() =>
+              setParams({ ...(tag ? { tag } : {}), feed: "following" })
+            }
+          >
+            Following
+          </button>
         </div>
+        <DiscoverTags
+          items={tags.data?.items || []}
+          interests={user?.profile.interests || []}
+          selected={tag}
+          change={(value) =>
+            setParams({
+              ...(value ? { tag: value } : {}),
+              ...(following ? { feed: "following" } : {}),
+            })
+          }
+        />
       </div>
       <PostGrid
-        endpoint={`/feed/?following=${following ? 1 : 0}${tag ? `&tag=${encodeURIComponent(tag)}` : ""}`}
+        feedFirst
+        endpoint={`/feed/?following=${following ? 1 : 0}${tag ? `&tag=${encodeURIComponent(tag)}` : `&preferences=${encodeURIComponent((user?.profile.interests || []).join(","))}`}`}
         empty={
           following
             ? "Your following feed is quiet"
@@ -349,57 +335,87 @@ function People({ query }: { query: string }) {
   );
 }
 
-export function PostFields({ post }: { post?: Post }) {
+export function PostFields({
+  post,
+  errors = {},
+}: {
+  post?: Post;
+  errors?: Record<string, string[]>;
+}) {
+  const id = useId();
+  const feedback = (name: string) =>
+    errors[name] && (
+      <span id={`${id}-${name}`} className="field-error">
+        {errors[name].join(" ")}
+      </span>
+    );
+  const validation = (name: string) => ({
+    "aria-invalid": Boolean(errors[name]),
+    "aria-describedby": errors[name] ? `${id}-${name}` : undefined,
+  });
   return (
     <>
       <label className="field">
         Title
         <input
           name="title"
+          {...validation("title")}
           required
           maxLength={200}
           defaultValue={post?.title || ""}
           placeholder="Give your idea a name"
         />
+        {feedback("title")}
       </label>
       <label className="field">
         Description
         <textarea
           name="description"
+          {...validation("description")}
           maxLength={5000}
           defaultValue={post?.description || ""}
           placeholder="What caught your eye?"
           rows={4}
         />
+        {feedback("description")}
       </label>
       <label className="field">
         Tags
         <input
           name="tags"
+          {...validation("tags")}
           maxLength={400}
           defaultValue={post?.tags.join(", ") || ""}
           placeholder="blue, architecture, nature"
         />
         <small>Up to 8 tags, separated by commas.</small>
+        {feedback("tags")}
       </label>
       <label className="field">
         Source link <span className="optional">optional</span>
         <input
           name="source_url"
+          {...validation("source_url")}
           type="url"
           maxLength={500}
           defaultValue={post?.source_url || ""}
           placeholder="https://…"
         />
+        {feedback("source_url")}
       </label>
       <label className="field">
-        Image description <span className="optional">optional</span>
+        Alt text <span className="optional">recommended</span>
         <input
           name="alt_text"
+          {...validation("alt_text")}
           maxLength={500}
           defaultValue={post?.alt_text || ""}
           placeholder="Describe the image for someone who can’t see it"
         />
+        <small>
+          A short description helps people using screen readers enjoy your pin.
+        </small>
+        {feedback("alt_text")}
       </label>
     </>
   );
@@ -411,6 +427,8 @@ export function CreatePost() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const navigate = useNavigate();
   const controller = useRef<AbortController | null>(null);
   useEffect(() => {
@@ -425,6 +443,7 @@ export function CreatePost() {
   useEffect(() => () => controller.current?.abort(), []);
   function choose(candidate: File | undefined) {
     setError("");
+    setFieldErrors({});
     if (!candidate) return;
     if (candidate.size > 8 * 1024 * 1024) {
       setError("Choose an image smaller than 8 MB.");
@@ -448,6 +467,7 @@ export function CreatePost() {
     setBusy(true);
     setProgress(0);
     setError("");
+    setFieldErrors({});
     controller.current = new AbortController();
     try {
       const post = await upload<Post>(
@@ -456,9 +476,24 @@ export function CreatePost() {
         setProgress,
         controller.current.signal,
       );
+      notify(
+        post.moderation_status && post.moderation_status !== "approved"
+          ? "Pin uploaded. Image review is pending."
+          : "Your pin was published.",
+      );
       navigate(`/posts/${post.id}`);
     } catch (error) {
-      if (!controller.current.signal.aborted) setError(message(error));
+      if (!controller.current.signal.aborted) {
+        setError(message(error));
+        if (error instanceof ApiError)
+          setFieldErrors(
+            Object.keys(error.fields).length
+              ? error.fields
+              : error.code === "invalid_tags"
+                ? { tags: [error.message] }
+                : {},
+          );
+      }
     } finally {
       if (!controller.current.signal.aborted) setBusy(false);
     }
@@ -477,13 +512,21 @@ export function CreatePost() {
           </h1>
         </div>
       </div>
-      <form className="create-layout" onSubmit={submit}>
+      <form
+        className={`create-layout ${file ? "has-file" : "choose-image"}`}
+        onSubmit={submit}
+      >
         <div>
           <label
-            className={`upload-zone ${file ? "has-image" : ""}`}
-            onDragOver={(event) => event.preventDefault()}
+            className={`upload-zone ${file ? "has-image" : ""} ${dragging ? "drag-over" : ""}`}
+            onDragOver={(event) => {
+              event.preventDefault();
+              if (!busy) setDragging(true);
+            }}
+            onDragLeave={() => setDragging(false)}
             onDrop={(event) => {
               event.preventDefault();
+              setDragging(false);
               if (!busy) choose(event.dataTransfer.files[0]);
             }}
           >
@@ -518,28 +561,31 @@ export function CreatePost() {
               </button>
             </div>
           )}
+          {!file && <ErrorNotice error={error} />}
         </div>
-        <div>
-          <PostFields />
-          <ErrorNotice error={error} />
-          {busy && (
-            <div className="upload-progress" role="status">
-              <progress value={progress} max={100} />
-              <span>
-                {progress < 100
-                  ? `Uploading ${progress}%`
-                  : "Making your image ready…"}
-              </span>
-            </div>
-          )}
-          <button className="primary-button" disabled={busy}>
-            {busy ? "Publishing…" : "Publish pin"}
-            <ArrowRight size={18} />
-          </button>
-          <p className="muted small-text">
-            Your pin is public. Credit its source when you can.
-          </p>
-        </div>
+        {file && (
+          <div>
+            <PostFields errors={fieldErrors} />
+            <ErrorNotice error={error} />
+            {busy && (
+              <div className="upload-progress" role="status">
+                <progress value={progress} max={100} />
+                <span>
+                  {progress < 100
+                    ? `Uploading ${progress}%`
+                    : "Making your image ready…"}
+                </span>
+              </div>
+            )}
+            <button className="primary-button publish-button" disabled={busy}>
+              {busy ? "Publishing…" : "Publish pin"}
+              <ArrowRight size={18} />
+            </button>
+            <p className="muted small-text">
+              Your pin is public. Credit its source when you can.
+            </p>
+          </div>
+        )}
       </form>
     </main>
   );
@@ -751,7 +797,8 @@ function Comments({ postId }: { postId: number }) {
   );
 }
 
-export function PostDetail() {
+export function PostDetail({ onBack }: { onBack?: () => void } = {}) {
+  const location = useLocation();
   const { id } = useParams();
   const resource = useResource<Post>(`/posts/${id}/`);
   const { user } = useAuth();
@@ -762,7 +809,18 @@ export function PostDetail() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [viewing, setViewing] = useState(false);
+  const [imageReady, setImageReady] = useState(false);
   const post = resource.data;
+  useEffect(() => {
+    if (!post || post.moderation_status !== "approved") return;
+    if (location.state?.pinClick)
+      void recordPinEvent(post.id, "click", user?.id);
+    const timer = setTimeout(
+      () => void recordPinEvent(post.id, "view", user?.id),
+      500,
+    );
+    return () => clearTimeout(timer);
+  }, [post?.id, location.state?.pinClick]);
   async function edit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!post) return;
@@ -798,8 +856,19 @@ export function PostDetail() {
   }
   if (resource.loading)
     return (
-      <main className="loading-page" role="status">
-        Opening your inspiration…
+      <main className="collection-page detail-page" aria-busy="true">
+        <div className="pin-detail-skeleton" role="status">
+          <div
+            className="image-skeleton"
+            style={{
+              aspectRatio: `${location.state?.pinPreview?.width || 480}/${location.state?.pinPreview?.height || 640}`,
+            }}
+          />
+          <div>
+            <Owl state="think" />
+            <p>Opening your inspiration...</p>
+          </div>
+        </div>
       </main>
     );
   if (!post)
@@ -814,10 +883,18 @@ export function PostDetail() {
     );
   return (
     <main className="collection-page detail-page">
-      <Link className="back-link" to="/">
+      <button
+        className="back-link quiet-button"
+        type="button"
+        onClick={() => {
+          if (onBack) onBack();
+          else if (window.history.state?.idx > 0) navigate(-1);
+          else navigate("/");
+        }}
+      >
         <ArrowLeft size={16} />
         Back to inspiration
-      </Link>
+      </button>
       <article className="post-detail">
         <div className="detail-image">
           <button
@@ -829,10 +906,21 @@ export function PostDetail() {
           </button>
           <img
             src={post.image}
+            onLoad={() => setImageReady(true)}
+            onError={() => {
+              setImageReady(true);
+              setError("This image could not be loaded. Refresh to try again.");
+            }}
             width={post.width}
             height={post.height}
             alt={post.alt_text || post.title}
           />
+          {!imageReady && (
+            <span
+              className="image-skeleton detail-image-skeleton"
+              aria-hidden="true"
+            />
+          )}
         </div>
         <div className="detail-copy">
           {post.scan_id && post.moderation_status !== "approved" && (
@@ -845,12 +933,51 @@ export function PostDetail() {
               }}
             />
           )}
+          <h1>{post.title}</h1>
+          <ErrorNotice error={error} />
+          <Link className="author-link" to={`/u/${post.owner.username}`}>
+            <Avatar author={post.owner} size="small" />
+            <span>
+              <strong>{post.owner.display_name || post.owner.username}</strong>
+              <small>@{post.owner.username}</small>
+            </span>
+          </Link>
           <div className="detail-actions">
+            <LikeButton post={post} />
+            <details className="pin-preference-menu">
+              <summary aria-label="More pin actions">
+                <MoreHorizontal size={20} />
+              </summary>
+              <div>
+                <button
+                  type="button"
+                  className="quiet-button"
+                  onClick={async () => {
+                    try {
+                      await recordPinEvent(post.id, "hide", user?.id);
+                      window.dispatchEvent(
+                        new CustomEvent("pin-hidden", { detail: post.id }),
+                      );
+                      notify("Pin hidden. We will show fewer ideas like this.");
+                      if (onBack) onBack();
+                      else navigate("/");
+                    } catch (error) {
+                      setError(message(error));
+                    }
+                  }}
+                >
+                  Not interested
+                </button>
+                {post.owner.id !== user?.id && (
+                  <ReportButton kind="post" target={post.id} label="Report" />
+                )}
+              </div>
+            </details>
             {(!post.moderation_status ||
               post.moderation_status === "approved") && (
               <ShareControl
                 title="pin"
-                path={`/posts/${post.id}`}
+                path={`/pin/${post.id}`}
                 chat={`/messages?pin=${post.id}`}
               />
             )}
@@ -884,7 +1011,6 @@ export function PostDetail() {
               Save
             </button>
           </div>
-          <h1>{post.title}</h1>
           {post.description && (
             <p className="post-description">{post.description}</p>
           )}
@@ -895,13 +1021,6 @@ export function PostDetail() {
               </Link>
             ))}
           </div>
-          <Link className="author-link" to={`/u/${post.owner.username}`}>
-            <Avatar author={post.owner} size="small" />
-            <span>
-              <strong>{post.owner.display_name || post.owner.username}</strong>
-              <small>@{post.owner.username}</small>
-            </span>
-          </Link>
           {post.owner.id === user?.id && (
             <details className="owner-actions pin-owner-menu">
               <summary aria-label="Pin options">
@@ -931,15 +1050,25 @@ export function PostDetail() {
               </div>
             </details>
           )}
-          {post.owner.id !== user?.id && (
-            <ReportButton kind="post" target={post.id} label="Report pin" />
-          )}
           {(!post.moderation_status ||
             post.moderation_status === "approved") && (
             <Comments key={post.id} postId={post.id} />
           )}
         </div>
       </article>
+      {post.moderation_status === "approved" && (
+        <section
+          className="related-pins explore-page"
+          aria-label="More to explore"
+        >
+          <h2>More to explore</h2>
+          <PostGrid
+            key={post.id}
+            feedFirst
+            endpoint={`/pins/${post.id}/related/`}
+          />
+        </section>
+      )}
       {viewing && (
         <Modal title={post.title} close={() => setViewing(false)}>
           <img

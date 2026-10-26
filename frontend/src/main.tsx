@@ -7,8 +7,12 @@ import { ChatProvider } from "./ChatContext";
 import "./styles.css";
 import "./messenger.css";
 import "./product.css";
-import "./minimal.css";
 import "./community.css";
+import "./minimal.css";
+import "./layout.css";
+import "./discover.css";
+import "./owl-motion.css";
+import "./pins.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

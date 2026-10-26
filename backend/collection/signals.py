@@ -1,9 +1,21 @@
 from django.db import transaction
-from django.db.models.signals import post_delete
+from django.db.models.signals import post_delete, post_save
+from django.db.models import F
 from django.dispatch import receiver
 from accounts.models import Profile
 from common.media import delete_files
-from .models import Post, ImageScan
+from .models import Post, ImageScan, PinLike
+
+
+@receiver(post_save, sender=PinLike)
+def increment_likes(sender, instance, created, **kwargs):
+    if created:
+        Post.objects.filter(pk=instance.pin_id).update(like_count=F('like_count') + 1)
+
+
+@receiver(post_delete, sender=PinLike)
+def decrement_likes(sender, instance, **kwargs):
+    Post.objects.filter(pk=instance.pin_id, like_count__gt=0).update(like_count=F('like_count') - 1)
 
 
 @receiver(post_delete, sender=Post)

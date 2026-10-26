@@ -22,6 +22,7 @@ import {
 } from "react-router-dom";
 import { ApiError, request, upload } from "./api";
 import { useAuth } from "./auth";
+import { pluralize } from "./format";
 import { useChat } from "./ChatContext";
 import { Avatar, ErrorNotice, Modal, message } from "./components";
 import type { Author, Page } from "./types";
@@ -759,8 +760,20 @@ export default function Chat() {
                           ? "New message requests will appear here."
                           : folder === "archive"
                             ? "Archived conversations will appear here."
-                            : "Find a friend and share something you love."}
+                            : "No conversations yet. Find a friend and share your first idea."}
                     </p>
+                    {!search && folder === "inbox" && (
+                      <button
+                        className="secondary-button"
+                        onClick={() => {
+                          setSelectedPeople([]);
+                          setInitialPerson("");
+                          setNewChat(true);
+                        }}
+                      >
+                        Start a conversation
+                      </button>
+                    )}
                   </>
                 )}
               </div>
@@ -824,8 +837,11 @@ export default function Chat() {
                   <SquarePen size={18} />
                 </span>
               </div>
-              <h2>Your ideas. Your people.</h2>
-              <p>Share a pin, say hello, or pick up where you left off.</p>
+              <h2>A little space to connect.</h2>
+              <p>
+                Choose a conversation to catch up, or start a new one and share
+                something worth keeping.
+              </p>
               {params.get("pin") && (
                 <p>Choose a conversation to share your pin.</p>
               )}
@@ -886,7 +902,7 @@ export default function Chat() {
                     {typing
                       ? "Typing…"
                       : conversation.kind === "group"
-                        ? `${conversation.members.length} members`
+                        ? pluralize(conversation.members.length, "member")
                         : online.some((n) => n !== user?.id)
                           ? "Online now"
                           : `@${conversation.members.find((m) => m.id !== user?.id)?.username || ""}`}

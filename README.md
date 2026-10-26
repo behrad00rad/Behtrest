@@ -14,6 +14,7 @@ Connecting React, a Python API, a database, accounts, image uploads, and comment
 
 - **October 10, 2026:** renamed the current app to **Behtrest**. The original project was named Bintrest; its original README and source remain preserved.
 - **October 10, 2026, community:** added follows and a following feed, activity preferences/unread controls, and a report queue with reversible moderation decisions and audit history.
+- **October 26, 2026, discovery and preview:** added a separate guest playground, account-based interests and personalized pin discovery, likes and hide controls, related pins, and a feed-first interface with reduced-motion-aware owl details. The preview and ranking are local; no public deployment is claimed.
 - **Original project:** built at age 13 for CS50x. The project folder references the 2022 course; the exact completion date has not been confirmed.
 - **October 9, 2026:** revisited the project, initialized a local Git repository, and planned a second version using Django and React.
 - **October 9, 2026, V2 foundation:** completed tasks 1–4: V1 reproduction, Django/React setup, data models, and secure account flows.
@@ -24,6 +25,8 @@ Connecting React, a Python API, a database, accounts, image uploads, and comment
 The original README is preserved verbatim in `docs/README-original.md`, including its wording and acknowledgments. Original source remains unchanged in `btrest/`, with Git tag `legacy-v1` preserving its initial snapshot. V2 lives in separate `backend/` and `frontend/` directories.
 
 ## V2: current state
+
+For a separate photo-filled playground with one-click guest access and simplified signup, see [Preview setup](docs/PREVIEW.md). It uses its own local database and uploads.
 
 **Stack:** Django 5.2, Channels/ASGI, SQLite, React 19, Vite, TypeScript, and Tailwind CSS. Production uses Redis for live events and temporary presence.
 
@@ -48,6 +51,9 @@ Implemented:
 - Reports, permission-checked moderation, reversible hiding/suspension, and an audit trail. See [community behavior and moderator setup](docs/COMMUNITY.md).
 - Local background image screening for public pins and avatars, private previews, retries, and human review/appeals. See [setup and behavior](docs/IMAGE-MODERATION.md).
 - Invite-only signup with member referral links, configurable allowances, code revocation/replacement, and audited in-app administrator controls. See [referral settings](docs/REFERRALS.md).
+- A separate guest preview with credited sample photography, isolated local data and sessions, a repeatable seed, and simplified signup. See [preview setup and limits](docs/PREVIEW.md).
+- Interest onboarding and editable preferences, personalized Discover ranking, related-pin recommendations, idempotent likes, and a private Liked collection. Event weighting, visibility, and ranking limits are documented in [pin discovery](docs/PIN-DISCOVERY.md).
+- A refreshed feed-first Discover screen, responsive masonry, keyboard-accessible tag controls, and reduced-motion-aware owl states. See the [UI audit](docs/UI-AUDIT.md) for tested behavior and remaining limits.
 - A Docker/Caddy/Uvicorn/Redis deployment candidate, production configuration checks, database readiness, and verified V2 backup/restore commands including private chat images.
 
 Private boards hide their collections; the original pins remain public. Local development uses filesystem media storage. Retry failed deletions with `python backend/manage.py cleanup_media` using the project virtual environment.
@@ -155,6 +161,9 @@ docs/LEGACY.md           V1 reproduction results and visual references
 docs/API.md              API contract, authentication, and permissions
 docs/VERIFICATION.md     Checks performed and screenshots
 docs/DEPLOYMENT.md       HTTPS deployment, storage, backups, recovery, and operations
+docs/PREVIEW.md         Isolated local guest playground setup and limitations
+docs/PIN-DISCOVERY.md   Pin navigation, feedback events, and ranking behavior
+docs/UI-AUDIT.md        Recent responsive UI refinements and verification limits
 deploy/                  Dockerfiles, Compose, Caddy, production environment example
 .github/workflows/       Backend, frontend, browser, and container verification
 TASKS.md                 Proposed V2 tasks and completion criteria

@@ -1,3 +1,4 @@
+import { completeInterests } from "./onboarding";
 import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
@@ -36,6 +37,7 @@ test("invite-only signup, administrator controls and code replacement", async ({
   try {
     await signup(page, username);
     await expect(page).toHaveURL(/5174\/$/);
+    await completeInterests(page);
     await page.goto(`/u/${username}`);
     const code = await page
       .locator('section[aria-label="Your invites"] code')
@@ -49,6 +51,7 @@ test("invite-only signup, administrator controls and code replacement", async ({
     await admin.getByLabel(/^Password/).fill("Moderation!TestGarden29");
     await admin.getByRole("button", { name: "Sign in", exact: true }).click();
     await expect(admin).toHaveURL(/5174\/$/);
+    await completeInterests(admin);
     await admin.goto("/settings/referrals");
     await admin.getByLabel("Require an invite to create an account").check();
     await admin.getByLabel("Invites per member", { exact: true }).fill("1");

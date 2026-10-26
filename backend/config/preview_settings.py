@@ -21,3 +21,5 @@ EMAIL_BACKEND = 'django.core.mail.backends.locmem.EmailBackend'
 AUTH_PASSWORD_VALIDATORS = [{'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator', 'OPTIONS': {'min_length': 6}}]
 # Guest uploads follow the same quarantine/review pipeline as public uploads.
 IMAGE_MODERATION_ENABLED = True
+PREVIEW_CURATED = True
+PREVIEW_CURATED_ROOT = BASE_DIR.parent / 'preview'

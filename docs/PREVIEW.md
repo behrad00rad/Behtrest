@@ -1,5 +1,7 @@
 # Preview playground
 
+Current demo: 18 curated local images replace the original 24-photo catalog. No fetch step is needed for the curated launcher. See [hosted setup and resource budget](HOSTED-PREVIEW.md). The legacy setup below is retained for reference.
+
 A separate demonstration app with 24 reviewed photographs, four fictional creators, public boards, comments, starter saves, and a clearly labeled sample conversation. Photography is credited in each pin description with a link to its original source. Photos come from [Lorem Picsum](https://picsum.photos/), which provides Unsplash photography and author/source metadata.
 
 The normal app keeps its existing database, media, account validation and referral policy. Guest access is disabled there. No existing accounts or synthetic fixtures are replaced. The earlier mobile CSS fix remains in the working tree.

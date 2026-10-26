@@ -1,0 +1,9 @@
+# Always use -p behtrest-preview; keep demo volumes separate from the real app.
+name: behtrest-preview
+services:
+  backend:
+    environment:
+      DJANGO_SETTINGS_MODULE: config.preview_production
+  moderation:
+    environment:
+      DJANGO_SETTINGS_MODULE: config.preview_production

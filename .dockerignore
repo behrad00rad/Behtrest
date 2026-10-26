@@ -5,6 +5,8 @@
 !frontend/**
 !deploy/
 !deploy/**
+!preview/
+!preview/*.jpg
 **/.env
 **/.env.*
 **/__pycache__/**

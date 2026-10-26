@@ -94,6 +94,7 @@ export function FirstRunInterests() {
   const [deferred, setDeferred] = useState(false);
   if (
     !auth.user ||
+    auth.previewMode ||
     auth.loading ||
     deferred ||
     (auth.user.profile.interests?.length || 0) >= 3 ||

@@ -42,3 +42,7 @@ btrest/back/images/*
 Thumbs.db
 .idea/
 .vscode/
+
+# Local deployment measurements
+*-resources.json
+resource-report.json

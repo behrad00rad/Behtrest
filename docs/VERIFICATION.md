@@ -168,3 +168,8 @@ Final Linux CI result: both jobs passed for commit 4813a43 in https://github.com
 - Typecheck, production build, Prettier, migration drift and diff whitespace checks passed. `npm run lint` was attempted; no lint script or installed linter is configured. No dependencies were added.
 
 All browser fixtures and runtime data are local/ignored. Screenshots were inspected. Physical-device native sharing/keyboard behavior, fresh container/runtime deployment and actual public social-crawler previews remain follow-ups. No production deployment or new CI result is claimed.
+
+
+## October 27: curated hosted preview preparation
+
+18 supplied images received complete authored metadata and repeatable isolated seeding. Local database backed up before replacing only legacy fictional-owner pins; 9 other posts remained. Curated seed tests confirm idempotence and preservation of real posts. 22 focused seed/auth/moderation tests passed. Typecheck, formatting, frontend build, Django production-preview deployment checks, Compose configuration and diff whitespace checks passed. No lint script is configured. Edge checks at 375/768/1440px verified loaded feed images, no horizontal overflow, one-click guest access without interest onboarding, and username/six-character-password signup without email/referral/confirmation. Docker engine unavailable: no container runtime, Linux RAM/CPU benchmark, HTTPS deployment, SMTP delivery or physical-device acceptance claimed.

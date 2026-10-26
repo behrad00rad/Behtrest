@@ -30,3 +30,10 @@ Local Edge journeys and pin Axe A/AA checks passed at 375/768/1440px. Separate l
 The broader collection/preview run passed 100 of 101 tests; an existing default-feed cursor-pagination regression remains open. There is no configured lint script. Native mobile sharing was invoked through a test stub; physical-device acceptance, the new container routing and public crawler behavior still need verification. The previous successful Linux CI deployment checks apply to an earlier revision. This work does not establish a new deployment or a fully passing suite.
 
 This is repository case-study material. No external portfolio/CMS page was changed or published as part of this update. See [verification](VERIFICATION.md), [pin behavior](PIN-DETAIL.md), and [deployment](DEPLOYMENT.md) for supporting detail.
+
+
+## A demo with a point of view
+
+The October 27 preview replaces generic stock photography with 18 owner-supplied images: monochrome portraits, owls, tattoo references, typography and dark illustration. Every sample has a title, contextual caption, useful alt text and searchable tags. Original proportions survive normalization. Repeated seeding does not duplicate samples or replace user-created content. Sample provenance is labeled honestly; creator attribution and publication rights remain unverified.
+
+One-click guest entry skips setup; optional accounts need only username and a six-character password. These rules are confined to the demo. A separate Compose project and production-derived HTTPS settings prepare it for hosting without sharing the real app database. A dependency-free Docker sampler measures resource use before choosing tighter limits. Linux container acceptance and deployment remain pending.

@@ -209,3 +209,5 @@ The chosen target is a small Linux server using Docker, Caddy HTTPS, Uvicorn, Re
 ## Acknowledgments
 
 Thank you to Harvard for CS50x, the CS50x Rasht team, and Mr. Tavasoli for helping me learn computer science. These acknowledgments carry forward from the original README.
+
+Hosted guest demo setup and curated seed: [deployment and resource budget](docs/HOSTED-PREVIEW.md).

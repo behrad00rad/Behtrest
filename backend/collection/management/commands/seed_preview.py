@@ -30,6 +30,10 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         if not settings.PREVIEW_MODE:
             raise CommandError('Use --settings=config.preview_settings. Normal app data must stay separate.')
+        if getattr(settings, 'PREVIEW_CURATED', False):
+            from django.core.management import call_command
+            call_command('seed_curated_preview', stdout=self.stdout)
+            return
         cache = Path(getattr(settings, 'PREVIEW_PHOTO_CACHE', Path(__file__).resolve().parents[4] / '.local' / 'preview-photos'))
         for photo_id, *_ in PHOTOS:
             if not (cache / f'{photo_id}.jpg').exists() or not (cache / f'{photo_id}.json').exists():

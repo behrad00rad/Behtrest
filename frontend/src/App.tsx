@@ -43,11 +43,13 @@ function Header() {
   const navigate = useNavigate();
   const accountMenu = useRef<HTMLDetailsElement>(null);
   const logoClicks = useRef<number[]>([]);
-  const [creating, setCreating] = useState(false);
   useEffect(() => {
-    let last = window.scrollY;
+    document.documentElement.classList.remove("header-hidden");
+    if (!["/", "/search"].includes(location.pathname)) return;
+    let last = Math.max(0, window.scrollY);
     const scroll = () => {
-      const y = window.scrollY;
+      const y = Math.max(0, window.scrollY);
+      if (y > 0 && Math.abs(y - last) < 8) return;
       document.documentElement.classList.toggle(
         "header-hidden",
         y > last && y > 100,
@@ -59,7 +61,7 @@ function Header() {
       window.removeEventListener("scroll", scroll);
       document.documentElement.classList.remove("header-hidden");
     };
-  }, []);
+  }, [location.pathname]);
   useEffect(() => {
     const outside = (event: PointerEvent) => {
       if (
@@ -229,6 +231,7 @@ function Header() {
               )}
               <Link to={`/u/${auth.user.username}`}>Your profile</Link>
               <Link to="/settings">Settings</Link>
+              {auth.user.is_guest && <Link to="/login">Sign in</Link>}
               <Link to="/story">Our story</Link>
               <button disabled={busy} onClick={() => void signOut()}>
                 <LogOut size={15} />
@@ -238,60 +241,73 @@ function Header() {
           </details>
         )}
       </header>
-      {auth.user && (
-        <nav className="mobile-nav" aria-label="Mobile navigation">
-          <NavLink to="/" end aria-label="Home">
-            <House size={19} />
-            <span>Home</span>
-          </NavLink>
-          <NavLink to="/messages" aria-label="Messages">
-            <span className="mobile-nav-icon">
-              <MessageCircle size={19} />
-              {chat.unread + chat.requests > 0 && (
-                <b className="chat-badge">{chat.unread + chat.requests}</b>
-              )}
-            </span>
-            <span>Messages</span>
-          </NavLink>
-          <NavLink
-            to="/create"
-            aria-label="Create pin"
-            onClick={(event) => {
-              if (event.metaKey || event.ctrlKey || creating) return;
-              event.preventDefault();
-              setCreating(true);
-              setTimeout(
-                () => {
-                  navigate("/create");
-                  setCreating(false);
-                },
-                window.matchMedia("(prefers-reduced-motion: reduce)").matches
-                  ? 0
-                  : 200,
-              );
-            }}
-          >
-            <span className="mobile-nav-create">
-              <Owl state={creating ? "blink" : "idle"} />
-            </span>
-            <span>Create</span>
-          </NavLink>
-          <NavLink to="/boards" aria-label="Your boards">
-            <Bookmark size={19} />
-            <span>Boards</span>
-          </NavLink>
-          <NavLink to={`/u/${auth.user.username}`} aria-label="Your profile">
-            <UserRound size={19} />
-            <span>Profile</span>
-          </NavLink>
-        </nav>
-      )}
       {error && (
         <p className="global-error" role="alert">
           {error}
         </p>
       )}
     </>
+  );
+}
+
+function MobileNavigation() {
+  const auth = useAuth();
+  const chat = useChat();
+  const navigate = useNavigate();
+  const [creating, setCreating] = useState(false);
+  const location = useLocation();
+  if (
+    !auth.user ||
+    ["/login", "/register", "/forgot-password"].includes(location.pathname)
+  )
+    return null;
+  return (
+    <nav className="mobile-nav" aria-label="Mobile navigation">
+      <NavLink to="/" end aria-label="Home">
+        <House size={19} />
+        <span>Home</span>
+      </NavLink>
+      <NavLink to="/messages" aria-label="Messages">
+        <span className="mobile-nav-icon">
+          <MessageCircle size={19} />
+          {chat.unread + chat.requests > 0 && (
+            <b className="chat-badge">{chat.unread + chat.requests}</b>
+          )}
+        </span>
+        <span>Messages</span>
+      </NavLink>
+      <NavLink
+        to="/create"
+        aria-label="Create pin"
+        onClick={(event) => {
+          if (event.metaKey || event.ctrlKey || creating) return;
+          event.preventDefault();
+          setCreating(true);
+          setTimeout(
+            () => {
+              navigate("/create");
+              setCreating(false);
+            },
+            window.matchMedia("(prefers-reduced-motion: reduce)").matches
+              ? 0
+              : 200,
+          );
+        }}
+      >
+        <span className="mobile-nav-create">
+          <Owl state={creating ? "blink" : "idle"} />
+        </span>
+        <span>Create</span>
+      </NavLink>
+      <NavLink to="/boards" aria-label="Your boards">
+        <Bookmark size={19} />
+        <span>Boards</span>
+      </NavLink>
+      <NavLink to={`/u/${auth.user.username}`} aria-label="Your profile">
+        <UserRound size={19} />
+        <span>Profile</span>
+      </NavLink>
+    </nav>
   );
 }
 
@@ -307,12 +323,13 @@ function PreviewBanner() {
   if (dismissed) return null;
   return (
     <aside className="preview-banner" aria-label="Preview notice">
-      <strong>Preview playground</strong>
+      <strong>{user?.is_guest ? "Guest preview" : "Preview playground"}</strong>
       <span className="preview-description">Sample content only.</span>
       {user?.is_guest && (
         <>
           <span className="guest-badge">Guest</span>
           <Link to="/register">Create account</Link>
+          <Link to="/login">Sign in</Link>
         </>
       )}
       <button
@@ -491,6 +508,7 @@ export default function App() {
         <Header />
         {auth.previewMode && <PreviewBanner />}
       </div>
+      <MobileNavigation />
       <ToastHost />
       <MotionLayer />
       <FirstRunInterests key={auth.user?.id || "anonymous"} />

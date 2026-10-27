@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "./auth";
 import { InterestEditor } from "./Interests";
@@ -5,7 +6,9 @@ import { useResource } from "./hooks";
 import { ErrorNotice } from "./components";
 
 export default function Settings() {
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
   const tags = useResource<{ items: string[] }>("/tags/");
   return (
     <main className="collection-page settings-page">
@@ -31,6 +34,29 @@ export default function Settings() {
       </section>
       <section className="settings-section">
         <h2>Your account</h2>
+        <ErrorNotice error={error} />
+        <button
+          className="secondary-button"
+          disabled={busy}
+          onClick={async () => {
+            setBusy(true);
+            setError("");
+            try {
+              await signOut();
+            } catch {
+              setError("Unable to sign out. Please try again.");
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          {busy ? "Signing out�" : "Sign out"}
+        </button>
+        {user?.is_guest && (
+          <Link className="primary-button" to="/login">
+            Sign in to your account
+          </Link>
+        )}
         <Link className="secondary-button" to={`/u/${user?.username}`}>
           Edit your profile
         </Link>

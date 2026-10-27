@@ -433,6 +433,11 @@ export function ProfilePage() {
           />
         </div>
         <div className="profile-actions">
+          {own && (
+            <Link className="secondary-button" to="/settings">
+              Settings
+            </Link>
+          )}
           {own ? (
             <button
               className="secondary-button"

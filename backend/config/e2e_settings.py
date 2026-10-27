@@ -13,6 +13,9 @@ DEBUG = True
 API_RATE_LIMITS_ENABLED = False
 IMAGE_MODERATION_ENABLED = os.environ.get('BEHTREST_E2E_MODERATE', '0') == '1'
 EMAIL_BACKEND = "django.core.mail.backends.locmem.EmailBackend"
+PREVIEW_MODE = os.environ.get('BEHTREST_E2E_PREVIEW') == '1'
+if PREVIEW_MODE:
+    AUTH_PASSWORD_VALIDATORS = [{'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator', 'OPTIONS': {'min_length': 6}}]
 FRONTEND_ORIGIN = "http://127.0.0.1:5174"
 CSRF_TRUSTED_ORIGINS = [FRONTEND_ORIGIN]
 ALLOWED_HOSTS = ["127.0.0.1", "localhost", "testserver"]

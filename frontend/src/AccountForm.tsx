@@ -52,7 +52,8 @@ export default function AccountForm({ mode }: { mode: Mode }) {
   }, [mode]);
   if (
     auth.user &&
-    (mode === "login" || (mode === "register" && !auth.user.is_guest))
+    !auth.user.is_guest &&
+    (mode === "login" || mode === "register")
   )
     return <Navigate to="/" replace />;
   const copy = content[mode];

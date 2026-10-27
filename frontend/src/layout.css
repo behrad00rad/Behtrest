@@ -322,3 +322,74 @@ body:has(.messaging-content) {
     padding-top: 16px;
   }
 }
+/* Fixed mobile navigation is a sibling of the animated header. */
+@media (max-width: 767px) {
+  html {
+    scrollbar-gutter: auto;
+    scroll-padding-top: calc(var(--app-top-height, 100px) + 16px);
+  }
+  .app-shell {
+    min-width: 0;
+    width: 100%;
+  }
+  .app-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .app-shell > .mobile-nav {
+    position: fixed;
+    inset: auto 0 0;
+    width: 100%;
+    max-width: 100%;
+    z-index: 40;
+  }
+  .app-shell .preview-banner {
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 4px 10px;
+  }
+  .preview-banner a,
+  .preview-banner button {
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+  }
+  .preview-banner .guest-badge {
+    display: none;
+  }
+  .app-shell:has(.auth-layout)
+    :is(
+      .header-search,
+      .activity-trigger,
+      .account-menu,
+      .site-header nav,
+      .preview-banner
+    ) {
+    display: none !important;
+  }
+  .app-shell:has(.auth-layout) .site-header {
+    height: 56px;
+    min-height: 56px;
+    justify-content: center;
+  }
+  .page-container > .auth-layout {
+    width: 100%;
+    min-width: 0;
+    margin: 8px 0 24px;
+  }
+  .auth-layout .form-panel {
+    min-width: 0;
+    padding: 24px 16px;
+  }
+  .app-shell .settings-section {
+    min-width: 0;
+    max-width: 100%;
+    padding: 16px;
+  }
+  .app-shell .page-container :is(input, textarea, select) {
+    max-width: 100%;
+    min-width: 0;
+  }
+  .app-shell .profile-actions {
+    flex-wrap: wrap;
+  }
+}

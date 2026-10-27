@@ -24,6 +24,18 @@ export default defineConfig({
     screenshot: "only-on-failure",
   },
   projects: [
+    ...(process.env.BEHTREST_E2E_PREVIEW === "1"
+      ? [
+          {
+            name: "safari",
+            use: {
+              ...devices["iPhone 13"],
+              browserName: "webkit" as const,
+              channel: undefined,
+            },
+          },
+        ]
+      : []),
     {
       name: "desktop",
       use: {

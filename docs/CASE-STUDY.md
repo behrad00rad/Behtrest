@@ -42,3 +42,8 @@ One-click guest entry skips setup; optional accounts need only username and a si
 ### Shipping on a shared 2 GB VPS
 
 The public preview at https://behtrest.behrad.xyz uses compiled frontend assets, existing nginx and one isolated API/model worker each. No frontend build, Vite or Node server runs on the host. Cloudflare client IPs are accepted only from its published edge networks. The database started clean with 18 curated pins; all deployment verification data was removed. Short acceptance measurements were about 163 MB combined API/model/Redis after uploads and 128 MB at subsequent idle, with the existing music services remaining active. Verified daily backups and cleanup are scheduled; encrypted off-server recovery and sustained-load capacity remain follow-ups.
+
+
+### One mobile shell, fewer competing rules
+
+A follow-up mobile audit consolidated safe-area, input-size and bottom-navigation rules that had drifted across screen styles. Profile now separates full-width content tabs from search and labeled creation actions, uses a compact invite pill/sheet, and keeps its empty state consistent with the owl logo. A neutral global button override was narrowed for the requested accent Create CTA. Automated checks now include Safari WebKit engine widths, simulated toolbar-height/safe-area changes and explicit header/nav edges, rather than document width alone. Physical iPhone Safari validation is still required.

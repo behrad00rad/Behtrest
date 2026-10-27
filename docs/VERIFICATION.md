@@ -1,6 +1,6 @@
-# Tasks 1–4 verification
+# Tasks 1â€“4 verification
 
-## Local background image moderation — October 10, 2026
+## Local background image moderation â€” October 10, 2026
 
 - Committed and pushed the previous Behtrest/community checkpoint to `origin/main` as `78e8db2` before implementation. New moderation work remains local/uncommitted.
 - Announced downloads before fetching the CPU runtime (~28 MB of wheels) and pinned NudeNet package (~10.6 MB, containing a 12.2 MB model). The original release download returned HTML and was rejected by size validation; the official PyPI package supplied the model. Its SHA-256 matches the pinned value. Upstream license/provenance are preserved; model binaries and local backup/environment files are excluded from Git.
@@ -11,7 +11,7 @@
 - Backed up normal V2 preview data to ignored `backend/backups/pre-image-moderation.zip` (52 verified files), applied the additive migration, enabled public pin/avatar screening, and started the separate local worker. Existing public content is not retroactively scanned, and private chat photos are not automatically screened. Docker model packaging/worker configuration is prepared; container runtime verification remains pending without a local engine.
 
 
-## Community features and Behtrest rename — October 10, 2026
+## Community features and Behtrest rename â€” October 10, 2026
 
 - Implemented roadmap items 3, 5, and 6: reports and moderation, following and a following feed, and activity notifications/preferences. The current app, package/config names, email labels, operating docs, and deployment examples use Behtrest. Original source/README and the actual GitHub repository URL retain their history. Existing browser drafts and legacy environment variables have compatibility handling.
 - The full backend suite passed with **84 tests**. Fourteen community tests cover follow idempotence/counts, self-follow rejection, CSRF/ownership, viewer-scoped pagination, blocks, notification preferences and private-save safeguards, reporting evidence/deduplication, staff permission checks, hiding/restoring pins/comments/messages, private attachment access, audit history, and suspension/session revocation.
@@ -62,7 +62,7 @@ The password-reset confirmation is covered by backend tests; a real user's passw
 
 ![V2 mobile sign-in](screenshots/v2-login-mobile.jpg)
 
-## Tasks 5–8 verification
+## Tasks 5â€“8 verification
 
 Verified October 9, 2026 using the same commands above:
 
@@ -72,7 +72,7 @@ Verified October 9, 2026 using the same commands above:
 - Added tests cover normalized image contents and thumbnails, orientation/metadata removal, invalid/oversized uploads, CSRF and ownership, failed storage/database writes, transaction rollback, durable deletion retries, and avatar replacement/removal.
 - Collection tests cover equal-timestamp cursor ordering, inserted-post exclusion, cursor signatures/filter scope, comment ownership, private-board visibility, idempotent saves, board covers, tag limits, source URL validation, search, and public profile privacy.
 
-Browser checks with a synthetic local account confirmed image selection/preview and publication, metadata and source rendering, comment creation, saving into a newly created private board, selecting its cover, profile editing and uploaded-pin display, pin search, and people search. The feed advanced beyond its first page. Reviewed feed layouts at 1280 × 900 and 390 × 844; saved screenshots below. Destructive actions and avatar lifecycle are covered by backend tests.
+Browser checks with a synthetic local account confirmed image selection/preview and publication, metadata and source rendering, comment creation, saving into a newly created private board, selecting its cover, profile editing and uploaded-pin display, pin search, and people search. The feed advanced beyond its first page. Reviewed feed layouts at 1280 Ã— 900 and 390 Ã— 844; saved screenshots below. Destructive actions and avatar lifecycle are covered by backend tests.
 
 The browser journey was manual; a repeatable end-to-end test and CI remain task 9. All runtime test accounts, images, and V2 database records are ignored by Git. V1 source and data remain untouched; no import or deployment was performed.
 
@@ -91,7 +91,7 @@ Verified October 9, 2026:
 - Polished low-contrast footnote text, underlined account links, decorative mobile artwork, labels for hidden mobile navigation text, textarea/select focus, selected filters, dialog focus restoration, and profile refresh behavior that previously interrupted avatar editing.
 - Frontend formatting, TypeScript/Vite build, Python compilation, Django system checks, and migration drift checks passed.
 - Docker Compose configuration validation passed using an ignored synthetic environment. Production `check --deploy --fail-level WARNING` passed, with only two intentionally silenced HSTS policy checks (`security.W005` and `security.W021`), documented in `DEPLOYMENT.md`.
-- The disposable recovery script passed fresh migrations → seeding → backup → verified restore, recovering 24 pins, 4 boards, 24 saves, and 48 normalized image/thumbnail files.
+- The disposable recovery script passed fresh migrations â†’ seeding â†’ backup â†’ verified restore, recovering 24 pins, 4 boards, 24 saves, and 48 normalized image/thumbnail files.
 
 CI is configured for backend checks/tests, frontend formatting/build, browser journeys, and container build/HTTPS smoke checks. No repository remote was pushed and no CI run is claimed. Docker Desktop's engine was unavailable locally despite a startup attempt; the container job must run on an available engine before publishing. SMTP credentials, real delivery, DNS, and a live server have not been configured or tested.
 
@@ -116,7 +116,7 @@ All four desktop/mobile browser journeys passed again after this adjustment, inc
 
 ![Minimal desktop messaging](screenshots/v2-minimal-chat-desktop.png)
 
-### Product polish 1–4, October 10, 2026
+### Product polish 1â€“4, October 10, 2026
 
 - Pin details now include a full-image viewer, copy-link/chat sharing, searchable save destinations, clearer comment metadata and menus, and responsive image/action layouts.
 - Profiles and boards use compact headers and searchable pin/board lists. Owners can filter public/private collections, sort saved pins, and enter Organize mode to choose covers or remove saves. Private-board sharing remains restricted.
@@ -194,3 +194,14 @@ Five disposable-database browser journeys passed at 360/375/414/768/1440px, cove
 A settled-page sweep at 900/1024/1100/1280/1366/1440px found no persistent overflow in Discover, Messages, Boards, Profile, Create, Words, login or pin detail. Per-frame tracing exposed the missed condition: card widths snapped to their resized dimensions while the old horizontal translate coordinates animated for 250ms, temporarily widening Discover by up to 161px at laptop widths (289px when shrinking to mobile). Masonry now assigns horizontal left positions immediately and animates only vertical translations; viewport resize reconciles geometry before the next paint. The offscreen owl flight has its own clipped fixed viewport instead of extending the document. No body-level horizontal-overflow hiding was added.
 
 Two isolated browser regressions passed with normal and reduced motion, sampling every frame through 1440/1366/1280/1100/1024/900/768/375px and back, plus the full decorative flight. Typecheck, formatting and production build passed; no lint script exists. Compiled assets were deployed atomically with backup and checksum checks, retaining old assets for open tabs. No API, moderation or existing music-service restarts.
+
+
+## Mobile safe areas and Profile polish
+
+Root causes: later, more specific screen rules could override the mobile 16px field rule; older page rules hid bottom navigation in pin and conversation views; fixed comment inputs had no separate nav offset; viewport-based modal widths and negative pin gutters disagreed with the shared container; the mobile footer still rendered; and Profile combined tabs/search/creation in one constrained row. Global neutral button styling and a 25px text-link margin also defeated the intended accent CTA and compact spacing.
+
+The final mobile stylesheet owns safe-area geometry, flex-child minimum sizes, 100% widths, border-box sizing, a stable opaque sticky header, equal five-column nav and matching page/composer offsets. Mobile footer is hidden. Inputs are >=16px, including an explicit lower bound for the transparent Words overlay. Pin overlays render an accessible nav inside the native dialog top layer. Profile has full-width tabs, separate expandable search, labeled creation actions only on Created/Boards, a compact invite sheet trigger, a shared rounded-ear sleeping owl, the requested empty-state copy, accent Create and Browse ideas actions.
+
+Five WebKit engine journeys passed at 375/390/430/768/1440px. Two Chromium cross-checks passed at 390/1440. Tests run the requested all-elements right-edge audit, distinguish intentionally contained tag scrollers from escaping elements, check document width plus header/nav edges, all visible field font sizes, equal nav cells, short/tall viewport changes, simulated 24px top/34px bottom safe areas, Profile controls, invite focus/Esc, chat composer/nav separation, direct and overlaid pin views, Boards and both creation modes. The final accent CTA also has a computed-color assertion. Screenshots were reviewed and inherited spacing/glyph issues corrected. Typecheck, formatting and production build passed. npm run lint was attempted but the repository has no lint script; no dependencies added.
+
+These are desktop WebKit/Chromium emulation checks, not a physical iPhone Safari acceptance pass. Native iPhone browser toolbar and on-screen keyboard remain unverified. Production deployment uses only prebuilt assets, backup, atomic index activation, retained older hashed assets and checksum readback; no server-side builds or service restarts. Unrelated screenshot work is excluded.

@@ -47,11 +47,13 @@ function BoardsList({
   own,
   changed,
   filter,
+  profileEmpty = false,
 }: {
   owner: string;
   own: boolean;
   changed?: () => void;
   filter?: string;
+  profileEmpty?: boolean;
 }) {
   const [query, setQuery] = useState("");
   const [privacy, setPrivacy] = useState("all");
@@ -128,20 +130,24 @@ function BoardsList({
         <div className="empty-state">
           <Owl state="sleep" />
           <h2>
-            {query || privacy !== "all"
+            {settled || privacy !== "all"
               ? "No matching boards"
-              : own
-                ? "Start your first collection"
-                : "No public boards yet"}
+              : profileEmpty
+                ? "Nothing here yet"
+                : own
+                  ? "Start your first collection"
+                  : "No public boards yet"}
           </h2>
           <p>
-            {query || privacy !== "all"
+            {settled || privacy !== "all"
               ? "Try another search or show all boards."
-              : own
-                ? "Create a board and give your ideas a home."
-                : "No public boards here yet."}
+              : profileEmpty
+                ? "Share a pin or write a few words."
+                : own
+                  ? "Create a board and give your ideas a home."
+                  : "No public boards here yet."}
           </p>
-          {query || privacy !== "all" ? (
+          {settled || privacy !== "all" ? (
             <button
               className="secondary-button"
               onClick={() => {
@@ -154,12 +160,17 @@ function BoardsList({
           ) : (
             own && (
               <button
-                className="secondary-button"
+                className={profileEmpty ? "primary-button" : "secondary-button"}
                 onClick={() => setCreating(true)}
               >
-                Create a board <Plus size={16} />
+                {profileEmpty ? "Create" : "Create a board"} <Plus size={16} />
               </button>
             )
+          )}
+          {profileEmpty && (
+            <Link className="text-link" to="/">
+              Browse ideas
+            </Link>
           )}
         </div>
       )}
@@ -390,6 +401,10 @@ export function ProfilePage() {
     [creating, setCreating] = useState(false);
   const [query, setQuery] = useState("");
   const settled = useDebouncedValue(query);
+  const searchField = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (searching) searchField.current?.querySelector("input")?.focus();
+  }, [searching]);
   const profile = resource.data;
   if (!profile)
     return (
@@ -434,7 +449,7 @@ export function ProfilePage() {
         </div>
         <div className="profile-actions">
           {own && (
-            <Link className="secondary-button" to="/settings">
+            <Link className="text-link profile-settings" to="/settings">
               Settings
             </Link>
           )}
@@ -484,6 +499,7 @@ export function ProfilePage() {
               className="icon-button"
               aria-label="Search profile"
               aria-expanded={searching}
+              aria-controls="profile-search"
               onClick={() => {
                 setSearching(!searching);
                 if (searching) setQuery("");
@@ -495,25 +511,25 @@ export function ProfilePage() {
           {own &&
             (tab === "boards" ? (
               <button
-                className="icon-button"
-                aria-label="Create board"
+                className="secondary-button"
+                aria-label="New board"
                 onClick={() => setCreating(true)}
               >
-                <Plus size={20} />
+                <Plus size={18} /> New board
               </button>
-            ) : (
+            ) : tab === "pins" ? (
               <Link
-                className="icon-button"
+                className="secondary-button"
                 aria-label="Create pin"
                 to="/create"
               >
-                <Plus size={20} />
+                <Plus size={18} /> Create pin
               </Link>
-            ))}
+            ) : null)}
         </div>
       </div>
       {searching && tab !== "liked" && (
-        <div className="profile-search">
+        <div className="profile-search" id="profile-search" ref={searchField}>
           <SearchField
             value={query}
             change={setQuery}
@@ -529,6 +545,7 @@ export function ProfilePage() {
           key={profile.board_count}
           owner={profile.username}
           own={own}
+          profileEmpty
           changed={resource.reload}
           filter={query}
         />
@@ -542,27 +559,21 @@ export function ProfilePage() {
               ? `/profiles/${encodeURIComponent(profile.username)}/liked/`
               : `/feed/?owner=${encodeURIComponent(profile.username)}&q=${encodeURIComponent(settled)}`
           }
-          empty={
-            query
-              ? "No matching pins"
-              : tab === "liked"
-                ? "A little room for what you love."
-                : "Share your first little thing"
-          }
+          empty={query ? "No matching pins" : "Nothing here yet"}
           emptyDescription={
-            tab === "liked"
-              ? "Like a pin to keep it here."
-              : "Your next little idea belongs here."
+            query ? "Try another search." : "Share a pin or write a few words."
           }
           emptyAction={
-            <Link
-              className="secondary-button"
-              to={tab === "liked" || !own ? "/" : "/create"}
-            >
-              {tab === "liked" || !own
-                ? "Explore pins"
-                : "Share your first little thing"}
-            </Link>
+            <>
+              {own && (
+                <Link className="primary-button" to="/create">
+                  Create
+                </Link>
+              )}
+              <Link className="text-link" to="/">
+                Browse ideas
+              </Link>
+            </>
           }
         />
       )}

@@ -465,6 +465,7 @@ function PinOverlay() {
   return (
     <Modal title="Pin details" className="pin-detail-dialog" close={close}>
       <PostDetail key={location.pathname} onBack={close} />
+      <MobileNavigation />
     </Modal>
   );
 }

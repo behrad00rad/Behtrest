@@ -98,8 +98,8 @@ export default function Owl({
       focusable="false"
     >
       <g className="owl-body">
-        <polygon points="13,12 24,22 9,27" fill="#4387ba" />
-        <polygon points="51,12 40,22 55,27" fill="#4387ba" />
+        <path d="M9 27 Q8 9 14 12 L25 22Z" fill="#4387ba" />
+        <path d="M55 27 Q56 9 50 12 L39 22Z" fill="#4387ba" />
         <ellipse cx="32" cy="38" rx="23" ry="22" fill="#6caddb" />
         <ellipse cx="32" cy="46" rx="13" ry="13" fill="#c2e1f5" />
         <path

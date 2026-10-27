@@ -27,3 +27,4 @@ createRoot(document.getElementById("root")!).render(
 );
 import "./profile.css";
 import "./words.css";
+import "./mobile.css";

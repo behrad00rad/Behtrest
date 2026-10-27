@@ -50,7 +50,7 @@ export default function Settings() {
             }
           }}
         >
-          {busy ? "Signing out�" : "Sign out"}
+          {busy ? "Signing out..." : "Sign out"}
         </button>
         {user?.is_guest && (
           <Link className="primary-button" to="/login">

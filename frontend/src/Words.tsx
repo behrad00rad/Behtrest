@@ -760,7 +760,7 @@ function WordsForm({ post, userId }: { post?: Post; userId: number }) {
                       {
                         fontFamily: fonts[config.font]?.family,
                         fontWeight: Number(fonts[config.font]?.weight || 400),
-                        fontSize: `${metrics.size * scale}px`,
+                        fontSize: `${Math.max(16, metrics.size * scale)}px`,
                         lineHeight: 1.35,
                         textAlign: config.align,
                         paddingTop: `${Math.max(32, (metrics.height - metrics.lines * metrics.lineHeight) / 2) * scale}px`,
@@ -788,7 +788,7 @@ function WordsForm({ post, userId }: { post?: Post; userId: number }) {
                     aria-live="polite"
                   >
                     {config.text.length}/280
-                    {config.text.length >= 260 ? " � Almost full" : ""}
+                    {config.text.length >= 260 ? " - Almost full" : ""}
                   </span>
                   {metrics.contrast < 4.5 && (
                     <span className="words-contrast" role="status">

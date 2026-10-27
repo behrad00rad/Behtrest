@@ -1,6 +1,6 @@
 .pin-detail-dialog {
-  width: min(1400px, calc(100vw - 48px));
-  max-width: calc(100vw - 32px);
+  width: min(1400px, calc(100% - 48px));
+  max-width: calc(100% - 32px);
   max-height: 92dvh;
   padding: 24px;
 }
@@ -45,8 +45,8 @@
 }
 @media (max-width: 767px) {
   .pin-detail-dialog {
-    width: calc(100vw - 16px);
-    max-width: calc(100vw - 16px);
+    width: calc(100% - 16px);
+    max-width: calc(100% - 16px);
     padding: 16px;
     max-height: 96dvh;
   }
@@ -646,7 +646,7 @@ details[open] > div {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  width: min(280px, calc(100vw - 16px));
+  width: min(280px, calc(100% - 16px));
   min-width: 0;
   max-height: min(480px, calc(100dvh - 16px));
   overflow-y: auto;

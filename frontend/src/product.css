@@ -706,7 +706,7 @@
   justify-content: center;
 }
 .modal:has(.full-image) {
-  width: min(1000px, calc(100vw - 32px));
+  width: min(1000px, calc(100% - 32px));
 }
 .full-image {
   display: block;
@@ -972,7 +972,7 @@
     font-size: 12px;
   }
   .product-share-panel {
-    max-width: calc(100vw - 85px);
+    max-width: none;
   }
   .board-detail-page .product-share-panel {
     left: auto;

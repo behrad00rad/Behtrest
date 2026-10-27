@@ -58,7 +58,10 @@ export function useMasonry(
         const sizes = cards.map((card) => card.getBoundingClientRect().height);
         cards.forEach((card, index) => {
           const column = heights.indexOf(Math.min(...heights));
-          card.style.transform = `translate(${column * (width + 12)}px, ${heights[column]}px)`;
+          // Column geometry must update with width, without interpolating from
+          // an old offscreen column when the viewport shrinks. Only Y animates.
+          card.style.left = `${column * (width + 12)}px`;
+          card.style.transform = `translateY(${heights[column]}px)`;
           heights[column] += sizes[index] + 12;
         });
         grid.style.height = `${Math.max(0, ...heights) - (cards.length ? 12 : 0)}px`;
@@ -77,12 +80,13 @@ export function useMasonry(
     grid
       .querySelectorAll(":scope > article")
       .forEach((card) => observer.observe(card));
-    window.addEventListener("resize", queue);
+    // Reconcile viewport geometry in the resize event, before the next paint.
+    window.addEventListener("resize", layout);
     layout();
     return () => {
       observer.disconnect();
       cancelAnimationFrame(frame);
-      window.removeEventListener("resize", queue);
+      window.removeEventListener("resize", layout);
     };
   }, [ref, items, enabled]);
   return longFeed;
@@ -207,8 +211,10 @@ export function MotionLayer() {
     };
   }, []);
   return flying ? (
-    <div className="owl-flight" aria-hidden="true">
-      <Owl state="happy" accessory="backpack" />
+    <div className="owl-flight-viewport" aria-hidden="true">
+      <div className="owl-flight">
+        <Owl state="happy" accessory="backpack" />
+      </div>
     </div>
   ) : null;
 }

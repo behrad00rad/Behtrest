@@ -79,8 +79,16 @@
   width: 36px;
   height: 40px;
 }
-.owl-flight {
+.owl-flight-viewport {
   position: fixed;
+  inset: 0;
+  overflow: clip;
+  contain: paint;
+  pointer-events: none;
+  z-index: 2000;
+}
+.owl-flight {
+  position: absolute;
   top: 18%;
   left: -80px;
   z-index: 2000;

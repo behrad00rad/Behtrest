@@ -9,6 +9,7 @@ import type { ReactNode } from "react";
 import { ApiError, getSession, request } from "./api";
 import type { Session, User } from "./api";
 import { clearUserDrafts } from "./chatDrafts";
+import { currentPush, disablePush } from "./push";
 
 type AuthState = {
   user: User | null;
@@ -44,7 +45,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+  useEffect(() => {
+    if (loading) return;
+    const owner = localStorage.getItem("behtrest-push-owner");
+    if (owner && owner !== String(user?.id)) {
+      void currentPush()
+        .then((sub) => sub?.unsubscribe())
+        .catch(() => {});
+      localStorage.removeItem("behtrest-push-owner");
+    }
+  }, [user?.id, loading]);
   async function signOut() {
+    await disablePush().catch(() => {});
     try {
       const session = await request<Session>("/auth/logout/", "POST", {});
       if (user) clearUserDrafts(user.id);

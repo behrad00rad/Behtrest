@@ -65,6 +65,9 @@ def conversations(request):
                 Membership.objects.create(conversation=conversation, user=request.user, accepted=True)
                 Membership.objects.create(conversation=conversation, user=target, accepted=preferences(target).contact_policy == "everyone")
             membership = member(request.user, conversation.pk)
+        if created:
+            from collection.push import chat_event
+            chat_event(conversation.pk, request.user.pk)
         notify(conversation.pk)
         return success(conversation_data(membership), 201 if created else 200)
     names = [name.strip() for name in text(request.data, "usernames", 1500, True).split(",") if name.strip()]
@@ -79,6 +82,8 @@ def conversations(request):
         conversation = Conversation.objects.create(kind="group", title=title)
         own = Membership.objects.create(conversation=conversation, user=request.user, role="admin", accepted=True)
         for target in targets.values(): Membership.objects.create(conversation=conversation, user=target, accepted=preferences(target).contact_policy == "everyone")
+    from collection.push import chat_event
+    chat_event(conversation.pk, request.user.pk)
     notify(conversation.pk)
     return success(conversation_data(own), 201)
 
@@ -148,6 +153,9 @@ def members(request, pk):
                 if membership.pk == own.pk: raise ApiError("leave_group", "Use Leave conversation to remove yourself.")
                 membership.active = False
             membership.save()
+    if request.method == "POST":
+        from collection.push import chat_event
+        chat_event(pk, request.user.pk)
     notify(pk)
     return success(conversation_data(own))
 
@@ -194,6 +202,8 @@ def messages(request, pk):
         Conversation.objects.filter(pk=pk).update(updated_at=timezone.now())
         own.archived = False
         own.save(update_fields=["archived"])
+    from collection.push import chat_event
+    chat_event(pk, request.user.pk, item.pk)
     notify(pk, request.user.pk)
     return success(message_data(visible_messages(own).get(pk=item.pk), request.user), 201)
 

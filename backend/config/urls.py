@@ -6,6 +6,7 @@ from common.api import health, ready
 from collection.link_preview import metadata, pin_page
 from collection import social
 from collection import image_moderation
+from collection.push import subscriptions
 
 urlpatterns = [
     path("pin/<int:pk>", pin_page),
@@ -20,6 +21,7 @@ urlpatterns = [
     path("api/profiles/<str:username>/followers/", social.follow_list, {"direction": "followers"}),
     path("api/profiles/<str:username>/following/", social.follow_list, {"direction": "following"}),
     path("api/notifications/", social.notifications),
+    path("api/push/subscriptions/", subscriptions),
     path("api/notifications/settings/", social.notification_settings),
     path("api/reports/", social.report),
     path("api/moderation/", social.moderation_queue),

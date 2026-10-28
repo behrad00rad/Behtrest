@@ -13,4 +13,7 @@ def emit(recipient, actor, kind, event_key, post=None):
     prefs, _ = ActivitySettings.objects.get_or_create(user=recipient)
     if not getattr(prefs, {"follow": "follows", "comment": "comments", "save": "saves", "pin": "pins"}[kind]):
         return
-    ActivityNotification.objects.get_or_create(recipient=recipient, event_key=event_key, defaults={"actor": actor, "kind": kind, "post": post})
+    event, created = ActivityNotification.objects.get_or_create(recipient=recipient, event_key=event_key, defaults={"actor": actor, "kind": kind, "post": post})
+    if created and kind in ("follow", "pin"):
+        from .push import enqueue
+        enqueue(recipient.pk, "follows" if kind == "follow" else "pins", event.pk, event_key)

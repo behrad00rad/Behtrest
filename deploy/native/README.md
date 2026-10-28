@@ -4,6 +4,8 @@ Live preview: https://behtrest.behrad.xyz (Cloudflare proxied, origin HTTPS). Th
 
 ## Paths and services
 
+Web Push setup and privacy/delivery details: [WEB-PUSH.md](../../docs/WEB-PUSH.md). The optional `behtrest-push.timer` starts bounded one-shot delivery jobs instead of an additional idle worker. Keep its VAPID private key in `/etc/behtrest`, outside releases; the daily backup pauses push delivery as well as the API and moderation writers.
+
 - `/srv/behtrest/releases/<release>`: root-owned versioned source, precompiled frontend, model and curated images; `current` selects the release.
 - `/srv/behtrest/venv`: pinned production Python dependencies, installed from wheels without compilation.
 - `/etc/behtrest/preview.env`: root-owned 0640 runtime configuration, readable by the isolated `behtrest` service account; never committed.

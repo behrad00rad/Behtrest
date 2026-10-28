@@ -34,55 +34,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     let stopped = false,
       failures = 0;
     let timer: ReturnType<typeof setTimeout>;
-    const notified = new Map<number, number>();
-    let notificationsEnabled = false;
-    void request<{ browser_notifications: boolean }>("/chat/settings/")
-      .then((p) => {
-        notificationsEnabled = p.browser_notifications;
-      })
-      .catch(() => {});
-    async function notify(data: ChatEvent) {
-      if (
-        !data.conversation_id ||
-        !data.sender_id ||
-        data.sender_id === user?.id ||
-        !document.hidden ||
-        !("Notification" in window) ||
-        Notification.permission !== "granted"
-      )
-        return;
-      try {
-        const pref = await request<{ browser_notifications: boolean }>(
-          "/chat/settings/",
-        );
-        notificationsEnabled = pref.browser_notifications;
-        const c = await request<{
-          accepted: boolean;
-          muted: boolean;
-          blocked: boolean;
-          last_message: { id: number; sender: { id: number } } | null;
-        }>(`/chat/conversations/${data.conversation_id}/`);
-        const m = c.last_message;
-        if (
-          !stopped &&
-          notificationsEnabled &&
-          c.accepted &&
-          !c.muted &&
-          !c.blocked &&
-          m &&
-          m.sender.id !== user?.id &&
-          m.id > (notified.get(data.conversation_id) || 0)
-        ) {
-          notified.set(data.conversation_id, m.id);
-          new Notification("Behtrest", {
-            body: "You have a new message.",
-            tag: `chat-${data.conversation_id}`,
-          });
-        }
-      } catch {
-        /* Notifications are optional; saved messages remain available. */
-      }
-    }
     const sync = async () => {
       try {
         const data = await request<typeof counts>("/chat/summary/");
@@ -108,7 +59,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
           setEvent(data);
           if (data.type === "refresh") {
             void sync();
-            void notify(data);
           }
         } catch {
           /* Ignore malformed transient events. */

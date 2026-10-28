@@ -1,0 +1,22 @@
+[Unit]
+Description=Behtrest Web Push outbox
+After=behtrest-api.service
+
+[Service]
+Type=oneshot
+User=behtrest
+Group=behtrest
+WorkingDirectory=/srv/behtrest/current/backend
+EnvironmentFile=/etc/behtrest/preview.env
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/srv/behtrest/venv/bin/python manage.py send_push
+TimeoutStartSec=35
+MemoryMax=128M
+CPUQuota=20%
+Nice=10
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/behtrest

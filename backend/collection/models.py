@@ -213,6 +213,32 @@ class ActivityNotification(models.Model):
         indexes = [models.Index(fields=["recipient", "-created_at", "-id"], name="activity_inbox_idx")]
 
 
+class PushSubscription(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    endpoint = models.URLField(max_length=2048, unique=True)
+    p256dh = models.CharField(max_length=100)
+    auth = models.CharField(max_length=32)
+    messages = models.BooleanField(default=True)
+    requests = models.BooleanField(default=True)
+    follows = models.BooleanField(default=True)
+    pins = models.BooleanField(default=False)
+    updated_at = models.DateTimeField(auto_now=True)
+
+
+class PushDelivery(models.Model):
+    subscription = models.ForeignKey(PushSubscription, on_delete=models.CASCADE)
+    kind = models.CharField(max_length=10)
+    target_id = models.PositiveBigIntegerField()
+    event_key = models.CharField(max_length=120)
+    attempts = models.PositiveSmallIntegerField(default=0)
+    available_at = models.DateTimeField(default=timezone.now)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["subscription", "event_key"], name="unique_push_delivery")]
+        indexes = [models.Index(fields=["available_at", "id"], name="push_due_idx")]
+
+
 class ContentReport(models.Model):
     reporter = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, related_name="content_reports")
     kind = models.CharField(max_length=10, choices=[("post", "Pin"), ("comment", "Comment"), ("message", "Message"), ("user", "Account")])

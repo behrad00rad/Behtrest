@@ -29,6 +29,8 @@ import type { Author, Page } from "./types";
 import { PeoplePicker, PeopleResults } from "./PeopleSearch";
 import ChatMessage from "./ChatMessage";
 import SharedMedia from "./SharedMedia";
+import PushNotifications from "./PushNotifications";
+import { enablePush, disablePush } from "./push";
 import { clearDraft, draftKey, readDraft, writeDraft } from "./chatDrafts";
 type Member = Author & {
   role: string;
@@ -523,15 +525,9 @@ export default function Chat() {
   }
   async function savePrefs(next: Prefs) {
     try {
-      if (
-        next.browser_notifications &&
-        "Notification" in window &&
-        (await Notification.requestPermission()) !== "granted"
-      ) {
-        setError(
-          "Browser notifications were not allowed. In-app unread counts still work.",
-        );
-        next.browser_notifications = false;
+      if (next.browser_notifications !== prefs?.browser_notifications) {
+        if (next.browser_notifications) await enablePush();
+        else await disablePush();
       }
       setPrefs(await request<Prefs>("/chat/settings/", "PATCH", next));
     } catch (e) {
@@ -637,6 +633,7 @@ export default function Chat() {
               </button>
             </div>
           </header>
+          <PushNotifications />
           <label className="messenger-search">
             <Search size={17} />
             <input
@@ -897,7 +894,20 @@ export default function Chat() {
                   )
                 )}
                 <div className="room-heading">
-                  <h2>{label(conversation)}</h2>
+                  <h2>
+                    {conversation.kind === "direct" &&
+                    conversation.members.find((m) => m.id !== user?.id) ? (
+                      <Link
+                        className="chat-profile-link"
+                        to={`/u/${encodeURIComponent(conversation.members.find((m) => m.id !== user?.id)!.username)}`}
+                        aria-label={`View ${label(conversation)}’s profile`}
+                      >
+                        {label(conversation)}
+                      </Link>
+                    ) : (
+                      label(conversation)
+                    )}
+                  </h2>
                   <span>
                     {typing
                       ? "Typing…"

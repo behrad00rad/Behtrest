@@ -1,0 +1,11 @@
+[Unit]
+Description=Deliver Behtrest notifications without an idle worker
+
+[Timer]
+OnBootSec=30
+OnUnitInactiveSec=15
+AccuracySec=1
+Unit=behtrest-push.service
+
+[Install]
+WantedBy=timers.target

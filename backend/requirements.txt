@@ -5,3 +5,4 @@ channels>=4.3,<5
 channels-redis>=4.3,<5
 uvicorn>=0.54,<1
 websockets>=17.2,<18
+pywebpush>=2.5,<3

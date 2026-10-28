@@ -98,3 +98,6 @@ if not 0 <= IMAGE_MODERATION_REVIEW < IMAGE_MODERATION_REJECT <= 1:
     raise ImproperlyConfigured('Image moderation thresholds must satisfy 0 <= review < reject <= 1.')
 
 FRONTEND_DIST = Path(os.environ.get('BEHTREST_FRONTEND_DIST', BASE_DIR.parent / 'frontend' / 'dist'))
+WEB_PUSH_PUBLIC_KEY = os.environ.get("BEHTREST_PUSH_PUBLIC_KEY", "")
+WEB_PUSH_PRIVATE_KEY = os.environ.get("BEHTREST_PUSH_PRIVATE_KEY", "")
+WEB_PUSH_SUBJECT = os.environ.get("BEHTREST_PUSH_SUBJECT", "mailto:hello@behrad.xyz")

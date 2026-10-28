@@ -94,8 +94,10 @@ export default function PushNotifications() {
               className="push-preference"
               role="switch"
               aria-checked={prefs[key]}
-              disabled={busy}
-              onClick={() => void update({ ...prefs, [key]: !prefs[key] })}
+              aria-disabled={busy}
+              onClick={() => {
+                if (!busy) void update({ ...prefs, [key]: !prefs[key] });
+              }}
             >
               <span>{label}</span>
               <span aria-hidden="true">{prefs[key] ? "On" : "Off"}</span>
